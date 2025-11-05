@@ -4,6 +4,7 @@ from typing import List, Optional, Union
 from pydantic import BaseModel, Field
 from uuid import UUID
 
+from src.core.schemes import MediaType
 
 
 # --- Enums ---
@@ -13,8 +14,7 @@ class BlockType(str, Enum):
     TEXT = "text"
     HEADER = "header"
     TABLE = "table"
-    BULLET_LIST = "bullet_list"
-    NUMBERED_LIST = "numbered_list"
+    LIST = "list"
     FILE = "file"
     LINK = "link"
 
@@ -67,7 +67,7 @@ class TextSpan(BaseModel):
 
 class Block(BaseModel):
     """Базовый класс для всех блоков."""
-    id: str = str(uuid.uuid4())
+    id: Optional[str] = None
     type: BlockType
     order: Optional[int] = None # если None, то вложен в какой-то другой блок
     style: BlockStyle = Field(default_factory=BlockStyle)
@@ -101,23 +101,20 @@ class TableBlock(Block):
 class FileBlock(Block):
     """Блок файла (изображение, PDF и т.д.)."""
     type: BlockType = BlockType.FILE
+    media_type: Optional[MediaType] = Field(None, description="Тип медиа-контента")
     file_name: str
     server_name: str
     style: FileStyle = Field(default_factory=FileStyle)
 
 
-class BulletListBlock(Block):
+class ListBlock(Block):
     """Блок маркированного списка."""
-    type: BlockType = BlockType.BULLET_LIST
+    type: BlockType = BlockType.LIST
+    list_type: str
     content: Optional[List[Union[UUID, 'AnyBlock']]] = None
     style: ListStyle = Field(default_factory=ListStyle)
 
 
-class NumberedListBlock(Block):
-    """Блок нумерованного списка."""
-    type: BlockType = BlockType.NUMBERED_LIST
-    content: Optional[List[Union[UUID, 'AnyBlock']]] = None
-    style: ListStyle = Field(default_factory=ListStyle)
 
 class LinkBlock(Block):
     type: BlockType = BlockType.LINK
@@ -125,4 +122,4 @@ class LinkBlock(Block):
     style: BlockStyle = Field(default_factory=BlockStyle)
 
 # Обновляем Union для всех типов блоков
-AnyBlock = Union[TextBlock, HeaderBlock, TableBlock, FileBlock, BulletListBlock, NumberedListBlock, LinkBlock]
+AnyBlock = Union[TextBlock, HeaderBlock, TableBlock, FileBlock, ListBlock, LinkBlock]

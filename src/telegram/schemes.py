@@ -2,15 +2,8 @@ from typing import Optional
 from pydantic import BaseModel, Field
 from enum import Enum
 
-class MediaType(str, Enum):
-    PHOTO = "photo"
-    VIDEO = "video"
-    AUDIO = "audio"
-    STICKER = "sticker"
-    GIF = "gif"
-    DOCUMENT = "document"
-    LINK = "link"
-    UNKNOWN = "unknown"
+from src.core.schemes import MediaType
+
 
 class ChatSchema(BaseModel):
     """Схема для представления информации о чате/диалоге."""

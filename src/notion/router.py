@@ -85,9 +85,15 @@ async def get_note(
 
 @router.post("/files")
 async def upload_file(uploaded_file: UploadFile, util: FileUtil = Depends(get_file_util)):
-    return util.save_file(uploaded_file.file, uploaded_file.filename)
+    return util.save_file(uploaded_file.file)
 
-@router.get("/files/{file_path}")
-async def get_file(file_path: str):
-    return FileResponse(file_path)
 
+@router.get("/api/notes/files/")
+async def get_file(server_name: str):
+    file_path = f"./var/files/{server_name}"
+
+    return FileResponse(
+        path=file_path,
+        filename=server_name,  # или любое другое имя без расширения
+        media_type='application/octet-stream'  # универсальный тип для бинарных файлов
+    )

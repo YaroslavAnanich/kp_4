@@ -157,13 +157,13 @@ class TelegramService:
         await self._ensure_client()
 
         messages = await self.client.get_messages(chat_id, limit=limit)
-        messages_schema: List[MessageSchema] = []
+        chat: List[MessageSchema] = []
 
         for message in messages:
             message_data = await self._to_message_schema(message)
-            messages_schema.append(message_data)
-
-        return messages_schema
+            chat.append(message_data)
+        chat.reverse()
+        return chat
 
 
 
@@ -204,8 +204,24 @@ class TelegramService:
 
             return FileBlock(
                 file_name=message.file_name or "unknown_file",
-                server_name=str(server_name)
+                server_name=str(server_name),
+                media_type=message.media_type
             )
+
+    async def chat_to_blocks(self, chat_id: int, limit: int = 100) -> List[AnyBlock]:
+        """Получить все сообщения из чата и преобразовать в блоки с нумерацией."""
+
+        messages = await self.get_messages_from_chat(chat_id, limit)
+        blocks = []
+
+        order = 1
+        for message in messages:
+            block = await self.message_to_block(message)
+            block.order = order
+            blocks.append(block)
+            order += 1
+
+        return blocks
 
     async def disconnect(self):
         if self.client:

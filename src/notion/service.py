@@ -7,9 +7,9 @@ from qdrant_client import AsyncQdrantClient, models
 from qdrant_client.http.models import Distance, VectorParams, PointStruct
 from sentence_transformers import SentenceTransformer
 
-from src.notion.schemes import AnyBlock, BlockType, TextBlock, HeaderBlock, TableBlock, FileBlock, BulletListBlock, \
-    NumberedListBlock
+from src.notion.schemes import AnyBlock, BlockType, TextBlock, HeaderBlock, TableBlock, FileBlock, ListBlock, LinkBlock
 from src.core.utils.file_util import FileUtil
+from src.core.schemes import MediaType
 
 # Настройки векторизации и Qdrant
 EMBEDDING_MODEL_NAME = "all-MiniLM-L6-v2"
@@ -31,13 +31,15 @@ class NotionService:
         """Извлекает текст из блока для векторизации, используя обновленные модели."""
         if isinstance(block, (TextBlock, HeaderBlock)):
             return " ".join([span.text for span in block.content])
-        elif isinstance(block, (BulletListBlock, NumberedListBlock)):
-            return f"{block.type.value} block with {len(block.content)} items."
-        elif isinstance(block, TableBlock):
-            num_cells = sum(len(row) for row in block.content)
-            return f"Table block with {len(block.content)} rows and {num_cells} cells."
-        elif isinstance(block, FileBlock):
-            return f"{block.type.value}: {block.file_name}"
+
+        if isinstance(block, FileBlock):
+            print("deeee")
+            if block.media_type == MediaType.DOCUMENT:
+                file_text = self.file_util.get_file_text(block.server_name)
+                print(file_text)
+                return file_text
+            else:
+                return""
         else:
             return ""
 
@@ -48,6 +50,7 @@ class NotionService:
     def _payload_to_pydantic(self, payload: dict) -> AnyBlock:
         """Конвертирует Qdrant Payload (словарь) обратно в Pydantic модель."""
         block_type = payload.get("type")
+
         if block_type == BlockType.TEXT.value:
             return TextBlock(**payload)
         elif block_type == BlockType.HEADER.value:
@@ -56,10 +59,10 @@ class NotionService:
             return TableBlock(**payload)
         elif block_type == BlockType.FILE.value:
             return FileBlock(**payload)
-        elif block_type == BlockType.BULLET_LIST.value:
-            return BulletListBlock(**payload)
-        elif block_type == BlockType.NUMBERED_LIST.value:
-            return NumberedListBlock(**payload)
+        elif block_type == BlockType.LIST.value:
+            return ListBlock(**payload)
+        elif block_type == BlockType.LINK.value:
+            return LinkBlock(**payload)  # Добавлена обработка LinkBlock
         else:
             raise ValueError(f"Unknown block type: {block_type}")
 
@@ -70,7 +73,7 @@ class NotionService:
         updated_data = block.model_dump()
 
         # Разрешение списков
-        if isinstance(block, (BulletListBlock, NumberedListBlock)):
+        if isinstance(block, ListBlock):
             resolved_items = []
             for item_id in block.content:
                 if item_id in block_cache:
@@ -78,10 +81,9 @@ class NotionService:
                     resolved_items.append(resolved_block)
             updated_data['content'] = resolved_items
 
-            if isinstance(block, BulletListBlock):
-                return BulletListBlock(**updated_data)
-            else:
-                return NumberedListBlock(**updated_data)
+
+            return ListBlock(**updated_data)
+
 
         # Разрешение таблиц
         elif isinstance(block, TableBlock):
@@ -120,10 +122,9 @@ class NotionService:
     async def add_block(self, collection_name: str, block: AnyBlock) -> AnyBlock:
         """Добавляет новый блок в заметку."""
         text_to_embed = self._extract_text_content(block)
-
         vector = await asyncio.to_thread(self.model.encode, text_to_embed)
         vector = vector.tolist()
-
+        block.id = str(uuid.uuid4())
         payload = self._pydantic_to_payload(block)
 
         await self.client.upsert(
@@ -138,6 +139,7 @@ class NotionService:
             wait=True,
         )
         return block
+
 
     async def delete_block(self, collection_name: str, block_id: Union[str, int]) -> bool:
         """Удаляет блок по его ID."""
