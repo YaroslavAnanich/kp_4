@@ -1,70 +1,17 @@
-import uuid
-import asyncio
-from typing import List, Union, Optional, Dict
+from typing import Dict, Union, List
 from uuid import UUID
 
-from qdrant_client import AsyncQdrantClient, models
-from qdrant_client.http.models import Distance, VectorParams, PointStruct
-from sentence_transformers import SentenceTransformer
-
-from src.notion.schemes import AnyBlock, BlockType, TextBlock, HeaderBlock, TableBlock, FileBlock, ListBlock, LinkBlock
 from src.core.utils.file_util import FileUtil
-from src.core.schemes import MediaType
-
-# Настройки векторизации и Qdrant
-EMBEDDING_MODEL_NAME = "all-MiniLM-L6-v2"
-EMBEDDING_VECTOR_SIZE = 384
-QDRANT_HOST = "localhost"
-QDRANT_PORT = 6333
+from src.notion.qdrant import NotionQdrant
+from src.notion.schemes import AnyBlock, ListBlock, TableBlock
 
 
 class NotionService:
-    def __init__(self, host: str = QDRANT_HOST, port: int = QDRANT_PORT):
-        self.client = AsyncQdrantClient(host=host, port=port)
-        self.model = SentenceTransformer(EMBEDDING_MODEL_NAME)
+    """Сервис для бизнес-логики работы с Notion блоками"""
+
+    def __init__(self):
+        self.qdrant = NotionQdrant()
         self.file_util = FileUtil()
-        print(f"Используется модель для векторизации: {EMBEDDING_MODEL_NAME}")
-
-    ## 🛠️ Вспомогательные методы
-
-    def _extract_text_content(self, block: AnyBlock) -> str:
-        """Извлекает текст из блока для векторизации, используя обновленные модели."""
-        if isinstance(block, (TextBlock, HeaderBlock)):
-            return " ".join([span.text for span in block.content])
-
-        if isinstance(block, FileBlock):
-            print("deeee")
-            if block.media_type == MediaType.DOCUMENT:
-                file_text = self.file_util.get_file_text(block.server_name)
-                print(file_text)
-                return file_text
-            else:
-                return""
-        else:
-            return ""
-
-    def _pydantic_to_payload(self, block: AnyBlock) -> dict:
-        """Конвертирует Pydantic модель в словарь для Qdrant Payload."""
-        return block.model_dump(mode='json')
-
-    def _payload_to_pydantic(self, payload: dict) -> AnyBlock:
-        """Конвертирует Qdrant Payload (словарь) обратно в Pydantic модель."""
-        block_type = payload.get("type")
-
-        if block_type == BlockType.TEXT.value:
-            return TextBlock(**payload)
-        elif block_type == BlockType.HEADER.value:
-            return HeaderBlock(**payload)
-        elif block_type == BlockType.TABLE.value:
-            return TableBlock(**payload)
-        elif block_type == BlockType.FILE.value:
-            return FileBlock(**payload)
-        elif block_type == BlockType.LIST.value:
-            return ListBlock(**payload)
-        elif block_type == BlockType.LINK.value:
-            return LinkBlock(**payload)  # Добавлена обработка LinkBlock
-        else:
-            raise ValueError(f"Unknown block type: {block_type}")
 
     ## 🔄 Рекурсивное разрешение вложенных блоков
 
@@ -80,10 +27,7 @@ class NotionService:
                     resolved_block = self._resolve_nested_blocks(block_cache[item_id], block_cache)
                     resolved_items.append(resolved_block)
             updated_data['content'] = resolved_items
-
-
             return ListBlock(**updated_data)
-
 
         # Разрешение таблиц
         elif isinstance(block, TableBlock):
@@ -96,7 +40,6 @@ class NotionService:
                         resolved_row.append(resolved_block)
                 resolved_body.append(resolved_row)
             updated_data['content'] = resolved_body
-
             return TableBlock(**updated_data)
 
         # Для остальных блоков нет вложенности, возвращаем их как есть
@@ -104,97 +47,66 @@ class NotionService:
 
     ## 💾 CRUD Методы
 
-    async def create_collection(self) -> str:
+    async def create_collection(self, collection_name: str = None) -> str:
         """Создает новую коллекцию (заметку)."""
-        collection_name = str(uuid.uuid4())
-        await self.client.recreate_collection(
-            collection_name=collection_name,
-            vectors_config=VectorParams(size=EMBEDDING_VECTOR_SIZE, distance=Distance.COSINE),
-        )
-        print(f"Создана коллекция: {collection_name}")
-        return collection_name
+        return await self.qdrant.create_collection(collection_name)
 
     async def delete_collection(self, collection_name: str) -> bool:
         """Удаляет коллекцию (заметку)."""
-        await self.client.delete_collection(collection_name=collection_name)
-        return True
+        return await self.qdrant.delete_collection(collection_name)
 
     async def add_block(self, collection_name: str, block: AnyBlock) -> AnyBlock:
         """Добавляет новый блок в заметку."""
-        text_to_embed = self._extract_text_content(block)
-        vector = await asyncio.to_thread(self.model.encode, text_to_embed)
-        vector = vector.tolist()
-        block.id = str(uuid.uuid4())
-        payload = self._pydantic_to_payload(block)
-
-        await self.client.upsert(
-            collection_name=collection_name,
-            points=[
-                PointStruct(
-                    id=block.id,
-                    vector=vector,
-                    payload=payload,
-                )
-            ],
-            wait=True,
-        )
-        return block
-
+        return await self.qdrant.add_block(collection_name, block)
 
     async def delete_block(self, collection_name: str, block_id: Union[str, int]) -> bool:
         """Удаляет блок по его ID."""
-        await self.client.delete_points(
-            collection_name=collection_name,
-            points_selector=models.PointIdsList(points=[block_id]),
-            wait=True
-        )
-        return True
+        return await self.qdrant.delete_block(collection_name, block_id)
 
     async def update_block(self, collection_name: str, block: AnyBlock) -> AnyBlock:
-        return await self.add_block(collection_name, block)
+        """Обновляет блок в коллекции."""
+        return await self.qdrant.update_block(collection_name, block)
 
-
-
-    async def get_collection(self, collection_name: str):
+    async def get_collection(self, collection_name: str) -> List[AnyBlock]:
         """
         Получает все блоки из коллекции, собирает их, разрешая вложенные ссылки,
         и возвращает упорядоченную страницу.
         """
+        # 1. Получаем все точки из коллекции
+        points = await self.qdrant.get_collection_blocks(collection_name)
 
-        # 1. Получаем все точки (Payload) из коллекции для кэширования
-        scroll_result = await self.client.scroll(
-            collection_name=collection_name,
-            limit=10000,
-            with_payload=True,
-            with_vectors=False
-        )
-
-        if not scroll_result[0]:
+        if not points:
             return []
 
         # 2. Создаем кэш всех блоков: {UUID: AnyBlock}
         block_cache: Dict[UUID, AnyBlock] = {}
 
-        for point in scroll_result[0]:
-            if point.payload and point.id is not None:
-                try:
-                    if isinstance(point.id, int):
-                        point.payload['id'] = str(point.id)
+        for point in points:
+            # Теперь point гарантированно словарь
+            payload = point.get('payload')
+            point_id = point.get('id')
 
-                    block = self._payload_to_pydantic(point.payload)
+            if payload and point_id is not None:
+                try:
+                    # Создаем копию payload для модификации
+                    processed_payload = payload.copy()
+                    if isinstance(point_id, int):
+                        processed_payload['id'] = str(point_id)
+
+                    block = self.qdrant._payload_to_pydantic(processed_payload)
 
                     if block.id is not None:
                         block_cache[block.id] = block
 
                 except Exception as e:
-                    print(f"Ошибка десериализации блока {point.id}: {e}")
+                    print(f"Ошибка десериализации блока {point_id}: {e}")
                     continue
 
         # 3. Разрешаем вложенные блоки и отбираем только корневые блоки
         resolved_root_blocks: List[AnyBlock] = []
 
         for block_id, block in block_cache.items():
-            if block.order is not None:
+            if hasattr(block, 'order') and block.order is not None:
                 resolved_block = self._resolve_nested_blocks(block, block_cache)
                 resolved_root_blocks.append(resolved_block)
 
@@ -203,3 +115,32 @@ class NotionService:
 
         # 5. Возвращаем готовую схему
         return resolved_root_blocks
+
+    async def search_context(
+            self,
+            query_text: str,
+            collection_names: List[str],
+            limit: int = 10
+    ) -> str:
+        """
+        Возвращает только чистый текстовый контекст без метаданных.
+        """
+        search_results = await self.qdrant.search_blocks(
+            query_text=query_text,
+            collection_names=collection_names,
+            limit=limit
+        )
+
+        text_chunks = []
+
+        for result in search_results:
+            try:
+                block = self.qdrant._payload_to_pydantic(result['payload'])
+                text_content = self.qdrant._extract_text_content(block).strip()
+                if text_content:
+                    text_chunks.append(text_content)
+            except Exception:
+                continue
+
+        # Ограничиваем общее количество чанков
+        return "\n\n".join(text_chunks[:limit]) if text_chunks else "Не найдено релевантной информации."

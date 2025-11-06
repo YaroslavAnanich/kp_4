@@ -5,14 +5,14 @@ from src.notion.router import get_notion_service
 from src.notion.service import NotionService
 from src.telegram.schemes import MessageSchema
 from src.telegram.service import TelegramService
-from src.telegram.config import settings
+from src.telegram.config import telegram_settings
 
 router = APIRouter(prefix="/api/telegram")
 
 
 @lru_cache(maxsize=1)
 def get_telegram_service() -> TelegramService:
-    return TelegramService(api_hash=settings.TG_API_HASH, api_id=settings.TG_API_ID)
+    return TelegramService(api_hash=telegram_settings.TG_API_HASH, api_id=telegram_settings.TG_API_ID)
 
 
 

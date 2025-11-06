@@ -1,6 +1,4 @@
-import uuid
 from enum import Enum
-from typing import List, Optional, Union
 from pydantic import BaseModel, Field
 from uuid import UUID
 
@@ -28,7 +26,7 @@ class TextStyle(BaseModel):
     underline: bool = False
     strikethrough: bool = False
     color: str = "black"
-    backgroundColor: Optional[str] = None
+    backgroundColor: str | None = None
 
 
 class BlockStyle(BaseModel):
@@ -50,8 +48,8 @@ class ListStyle(BlockStyle):
 
 class FileStyle(BlockStyle):
     """Стили для файлов."""
-    width: Optional[str] = None
-    height: Optional[str] = None
+    width: str | None = None
+    height: str | None = None
     display: str = "inline"  # inline, block
 
 
@@ -67,9 +65,9 @@ class TextSpan(BaseModel):
 
 class Block(BaseModel):
     """Базовый класс для всех блоков."""
-    id: Optional[str] = None
+    id: str = None
     type: BlockType
-    order: Optional[int] = None # если None, то вложен в какой-то другой блок
+    order: int | None = None # если None, то вложен в какой-то другой блок
     style: BlockStyle = Field(default_factory=BlockStyle)
 
 
@@ -79,14 +77,14 @@ class Block(BaseModel):
 class TextBlock(Block):
     """Блок обычного текста (параграф)."""
     type: BlockType = BlockType.TEXT
-    content: List[TextSpan]
+    content: list[TextSpan]
     style: BlockStyle = Field(default_factory=BlockStyle)
 
 
 class HeaderBlock(Block):
     """Блок заголовка."""
     type: BlockType = BlockType.HEADER
-    content: List[TextSpan]
+    content: list[TextSpan]
     level: int = 1  # уровень заголовка (1-6)
     style: BlockStyle = Field(default_factory=BlockStyle)
 
@@ -94,14 +92,14 @@ class HeaderBlock(Block):
 class TableBlock(Block):
     """Блок таблицы."""
     type: BlockType = BlockType.TABLE
-    content: Optional[List[List[Union[UUID, dict]]]]
+    content: list[list[UUID | dict]]
     style: TableStyle = Field(default_factory=TableStyle)
 
 
 class FileBlock(Block):
     """Блок файла (изображение, PDF и т.д.)."""
     type: BlockType = BlockType.FILE
-    media_type: Optional[MediaType] = Field(None, description="Тип медиа-контента")
+    media_type: MediaType
     file_name: str
     server_name: str
     style: FileStyle = Field(default_factory=FileStyle)
@@ -111,15 +109,15 @@ class ListBlock(Block):
     """Блок маркированного списка."""
     type: BlockType = BlockType.LIST
     list_type: str
-    content: Optional[List[Union[UUID, 'AnyBlock']]] = None
+    content: list[UUID | dict]
     style: ListStyle = Field(default_factory=ListStyle)
 
 
 
 class LinkBlock(Block):
     type: BlockType = BlockType.LINK
-    content: str
+    content: str = ""
     style: BlockStyle = Field(default_factory=BlockStyle)
 
-# Обновляем Union для всех типов блоков
-AnyBlock = Union[TextBlock, HeaderBlock, TableBlock, FileBlock, ListBlock, LinkBlock]
+
+AnyBlock = TextBlock | HeaderBlock | TableBlock | FileBlock | ListBlock | LinkBlock

@@ -14,3 +14,5 @@ session_factory = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 class Base(DeclarativeBase):
     pass
 
+Base.metadata.drop_all(engine)
+Base.metadata.create_all(engine)

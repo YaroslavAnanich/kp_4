@@ -204,7 +204,7 @@ class TelegramService:
 
             return FileBlock(
                 file_name=message.file_name or "unknown_file",
-                server_name=str(server_name),
+                server_name=server_name,
                 media_type=message.media_type
             )
 
