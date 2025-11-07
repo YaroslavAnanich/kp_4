@@ -49,7 +49,7 @@ class NotionQdrant:
         vector = await asyncio.to_thread(self.model.encode, text_to_embed)
         vector = vector.tolist()
 
-        if block.id is None:
+        if block.id is not str(uuid.uuid4()):
             block.id = str(uuid.uuid4())
 
         payload = self._pydantic_to_payload(block)

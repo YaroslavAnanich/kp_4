@@ -1,7 +1,7 @@
-from datetime import datetime
-from sqlalchemy import select, delete, update
+from sqlalchemy import select
 
-from src.llm.models import ChatOrm, RequestResponseOrm, QdrantCollectionOrm, ChatCollectionOrm
+from src.llm.models import ChatOrm, RequestResponseOrm, ChatCollectionOrm
+from src.notion.models import QdrantCollectionOrm
 
 
 class LlmMysql:
@@ -11,7 +11,7 @@ class LlmMysql:
 
 
     #LLM Chats
-    def add_chat(self, user_id) -> ChatOrm:
+    def add_chat(self, user_id: int) -> ChatOrm:
         with self.session_factory() as session:
             chat = ChatOrm(user_id=user_id)
             session.add(chat)
@@ -19,12 +19,15 @@ class LlmMysql:
             session.refresh(chat)  # Обновляем объект, чтобы получить сгенерированный ID
             return chat
 
-    def delete_chat(self, chat_id: int) -> None:
+    def delete_chat(self, chat_id: int) -> bool:
         with self.session_factory() as session:
             chat = session.get(ChatOrm, chat_id)
             if chat:
                 session.delete(chat)
                 session.commit()
+                return True
+            else:
+                return False
 
     def get_all_chats_by_user_id(self, user_id: int) -> list[ChatOrm]:
         with self.session_factory() as session:
@@ -66,78 +69,9 @@ class LlmMysql:
             return result.scalars().all()
 
     #collection
-    def add_qdrant_collection(self, collection_name: str, tag: str | None = None) -> QdrantCollectionOrm:
-        with self.session_factory() as session:
-            collection = QdrantCollectionOrm(
-                collection_name=collection_name,
-                tag=tag
-            )
-            session.add(collection)
-            session.commit()
-            session.refresh(collection)
-            return collection
 
-    def delete_qdrant_collection_by_id(self, collection_id: str) -> bool:
-        with self.session_factory() as session:
-            collection = session.execute(
-                select(QdrantCollectionOrm)
-                .where(QdrantCollectionOrm.id == collection_id)
-            ).scalar_one_or_none()
 
-            if collection:
-                session.delete(collection)
-                session.commit()
-                return True
-            return False
-
-    def update_qdrant_collection_tag_by_id(self, collection_id: str, new_tag: str) -> None:
-        with self.session_factory() as session:
-            query = (
-                update(QdrantCollectionOrm)
-                .where(QdrantCollectionOrm.id == collection_id)
-                .values(tag=new_tag)
-            )
-            session.execute(query)
-            session.commit()
-
-    def get_qdrant_collection_by_user_id_with_null_tag(self, user_id: int) -> list[QdrantCollectionOrm]:
-        with self.session_factory() as session:
-            query = (
-                select(QdrantCollectionOrm)
-                .select_from(QdrantCollectionOrm)
-                .join(ChatCollectionOrm, QdrantCollectionOrm.id == ChatCollectionOrm.qdrant_collection_id)
-                .join(ChatOrm, ChatCollectionOrm.chat_id == ChatOrm.id)
-                .where(
-                    ChatOrm.user_id == user_id,
-                    QdrantCollectionOrm.tag.is_(None)
-                )
-            )
-            result = session.execute(query)
-            return result.scalars().all()
-
-    def get_all_tags_with_collections(self) -> dict[str, list[QdrantCollectionOrm]]:
-        with self.session_factory() as session:
-            # Получаем все коллекции, у которых есть тег (tag не NULL)
-            query = (
-                select(QdrantCollectionOrm)
-                .where(QdrantCollectionOrm.tag.is_not(None))
-                .order_by(QdrantCollectionOrm.tag)
-            )
-            result = session.execute(query)
-            collections = result.scalars().all()
-
-            # Группируем коллекции по тегам
-            tags_with_collections = {}
-            for collection in collections:
-                tag = collection.tag
-                if tag not in tags_with_collections:
-                    tags_with_collections[tag] = []
-                tags_with_collections[tag].append(collection)
-
-            return tags_with_collections
-
-    def add_chat_collections_by_qdrant_ids(self, chat_id: int, qdrant_collection_ids: list[int]) -> list[
-        ChatCollectionOrm]:
+    def add_chat_collections_by_qdrant_ids(self, chat_id: int, qdrant_collection_ids: list[int]) -> list[int]:
         with self.session_factory() as session:
             chat_collections = []
             for qdrant_collection_id in qdrant_collection_ids:
@@ -154,7 +88,7 @@ class LlmMysql:
             for chat_collection in chat_collections:
                 session.refresh(chat_collection)
 
-            return chat_collections
+            return qdrant_collection_ids
 
     def get_qdrant_collections_by_chat_id(self, chat_id: int) -> list[QdrantCollectionOrm]:
         with self.session_factory() as session:

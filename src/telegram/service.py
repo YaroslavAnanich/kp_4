@@ -1,11 +1,11 @@
 from io import BytesIO
 from typing import List, Optional
 from telethon import TelegramClient
-from telethon.tl.types import Dialog, Message, User, Chat, Channel, MessageMediaPhoto, MessageMediaDocument, Document, \
-    MessageMediaWebPage, WebPage
+from telethon.tl.types import (Dialog, Message, User, MessageMediaPhoto, MessageMediaDocument, Document,
+                               MessageMediaWebPage)
 
 from src.core.utils.file_util import FileUtil
-from src.notion.schemes import AnyBlock, TextSpan, TextBlock, BlockStyle, LinkBlock, FileBlock, FileStyle
+from src.notion.schemes import AnyBlock, TextSpan, TextBlock, LinkBlock, FileBlock
 from src.telegram.schemes import ChatSchema, MessageSchema, MediaType
 import base64
 
@@ -198,9 +198,11 @@ class TelegramService:
 
             # Создаем файловый объект из байтов
             file_obj = BytesIO(file_bytes)
-
+            print("я дошел до этого момента")
+            print(file_obj)
             # Сохраняем файл
             server_name = self.file_util.save_file(file_obj)
+            print(server_name)
 
             return FileBlock(
                 file_name=message.file_name or "unknown_file",

@@ -101,7 +101,7 @@ class FileBlock(Block):
     type: BlockType = BlockType.FILE
     media_type: MediaType
     file_name: str
-    server_name: str
+    server_name: str| None = None #При добавлении блока всегда None
     style: FileStyle = Field(default_factory=FileStyle)
 
 

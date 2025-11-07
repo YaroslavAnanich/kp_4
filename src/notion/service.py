@@ -1,7 +1,10 @@
 from typing import Dict, Union, List
 from uuid import UUID
 
+from src.core.database import engine, session_factory
 from src.core.utils.file_util import FileUtil
+from src.notion.models import QdrantCollectionOrm
+from src.notion.mysql import NotionMysql
 from src.notion.qdrant import NotionQdrant
 from src.notion.schemes import AnyBlock, ListBlock, TableBlock
 
@@ -11,6 +14,7 @@ class NotionService:
 
     def __init__(self):
         self.qdrant = NotionQdrant()
+        self.mysql = NotionMysql(engine=engine, session_factory=session_factory)
         self.file_util = FileUtil()
 
     ## 🔄 Рекурсивное разрешение вложенных блоков
@@ -47,31 +51,33 @@ class NotionService:
 
     ## 💾 CRUD Методы
 
-    async def create_collection(self, collection_name: str = None) -> str:
-        """Создает новую коллекцию (заметку)."""
-        return await self.qdrant.create_collection(collection_name)
+    async def create_collection(self, collection_name: str = None) -> QdrantCollectionOrm:
+        collection_name = await self.qdrant.create_collection(collection_name)
+        return self.mysql.add_qdrant_collection(collection_name)
 
-    async def delete_collection(self, collection_name: str) -> bool:
-        """Удаляет коллекцию (заметку)."""
-        return await self.qdrant.delete_collection(collection_name)
+    async def delete_collection(self, collection_name: str, collection_id: str) -> bool:
+        await self.qdrant.delete_collection(collection_name)
+        self.mysql.delete_qdrant_collection_by_id(collection_id)
+
+    async def update_qdrant_collection_tag(self, collection_id: str, new_tag: str) -> None:
+        self.mysql.update_qdrant_collection_tag_by_id(collection_id, new_tag)
+
+    async def get_qdrant_collection_without_tag(self, user_id: int) -> list[QdrantCollectionOrm]:
+        return self.mysql.get_qdrant_collection_by_user_id_with_null_tag(user_id)
+
+    async def get_all_tags_with_collections(self) -> dict[str, list[QdrantCollectionOrm]]:
+        self.mysql.get_all_tags_with_collections()
 
     async def add_block(self, collection_name: str, block: AnyBlock) -> AnyBlock:
-        """Добавляет новый блок в заметку."""
         return await self.qdrant.add_block(collection_name, block)
 
     async def delete_block(self, collection_name: str, block_id: Union[str, int]) -> bool:
-        """Удаляет блок по его ID."""
         return await self.qdrant.delete_block(collection_name, block_id)
 
     async def update_block(self, collection_name: str, block: AnyBlock) -> AnyBlock:
-        """Обновляет блок в коллекции."""
         return await self.qdrant.update_block(collection_name, block)
 
     async def get_collection(self, collection_name: str) -> List[AnyBlock]:
-        """
-        Получает все блоки из коллекции, собирает их, разрешая вложенные ссылки,
-        и возвращает упорядоченную страницу.
-        """
         # 1. Получаем все точки из коллекции
         points = await self.qdrant.get_collection_blocks(collection_name)
 
@@ -116,12 +122,7 @@ class NotionService:
         # 5. Возвращаем готовую схему
         return resolved_root_blocks
 
-    async def search_context(
-            self,
-            query_text: str,
-            collection_names: List[str],
-            limit: int = 10
-    ) -> str:
+    async def search_in_notion(self, query_text: str, collection_names: List[str], limit: int = 10) -> str:
         """
         Возвращает только чистый текстовый контекст без метаданных.
         """

@@ -1,6 +1,4 @@
-from datetime import datetime
-
-from sqlalchemy import Integer, ForeignKey, DateTime, Text, String
+from sqlalchemy import Integer, ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.core.database import Base
@@ -19,14 +17,6 @@ class RequestResponseOrm(Base):
     chat_id: Mapped[int] = mapped_column(Integer, ForeignKey("llm_chat.id", ondelete="CASCADE"))
     request_content: Mapped[str] = mapped_column(Text)
     response_content: Mapped[str] = mapped_column(Text)
-
-
-class QdrantCollectionOrm(Base):
-    __tablename__ = "qdrant_collection"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    collection_name: Mapped[str] = mapped_column(String)
-    tag: Mapped[str] = mapped_column(String, nullable=True)
 
 
 class ChatCollectionOrm(Base):

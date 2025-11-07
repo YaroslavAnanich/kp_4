@@ -3,7 +3,7 @@ from src.auth.schemes import UserScheme
 from src.auth.mysql import AuthMysql
 from src.core.database import engine, session_factory
 
-router = APIRouter(tags=["Авторизация"])
+router = APIRouter(tags=["auth"])
 
 
 def get_auth_service() -> AuthMysql:
@@ -15,9 +15,9 @@ async def register(user_scheme: UserScheme, auth_mysql_service: AuthMysql = Depe
     user_from_database = auth_mysql_service.get_user_by_phone(user_scheme.phone)
     if user_from_database is None:
         user = auth_mysql_service.add_user(user_scheme.phone, user_scheme.password)
-        return {"message": f"Пользователь c таким телефоном {user.phone} успешно зарегистрирован"}
+        return user
     else:
-        raise HTTPException(status_code=401, detail=f"Пользователь с таким телефоном: {user_scheme.phone} уже существует")
+        raise HTTPException(status_code=401, detail=f"A user with this phone number: {user_scheme.phone} already exists.")
 
 
 @router.post("/api/login")
@@ -25,11 +25,11 @@ async def login(user_scheme: UserScheme, auth_mysql_service: AuthMysql = Depends
     user_from_database = auth_mysql_service.get_user_by_phone(user_scheme.phone)
 
     if user_from_database is None:
-        raise HTTPException(status_code=401, detail=f"Пользователь с таким телефоном: {user_scheme.phone} не найден")
+        raise HTTPException(status_code=401, detail=f"User with this phone number: {user_scheme.phone} not found")
 
     if user_from_database.phone == user_scheme.phone and user_from_database.password == user_scheme.password:
-        return {"user_id": user_from_database.id}
+        return user_from_database
     else:
-        raise HTTPException(status_code=401, detail=f"Неверно введен телефон или пароль")
+        raise HTTPException(status_code=401, detail=f"Incorrect phone number or password entered")
 
 

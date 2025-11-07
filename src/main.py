@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.core.api import main_router
+from src.core.database import Base, engine
 
 app = FastAPI()
 
@@ -9,8 +10,11 @@ app.include_router(main_router)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Разрешаем все источники (для тестирования)
-    allow_credentials=True,  # Разрешаем отправку cookies
-    allow_methods=["*"],  # Разрешаем все HTTP-методы
-    allow_headers=["*"]  # Разрешаем все заголовки
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"]
 )
+
+# Base.metadata.drop_all(engine)
+# Base.metadata.create_all(engine)
