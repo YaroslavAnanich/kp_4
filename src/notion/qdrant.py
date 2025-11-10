@@ -45,7 +45,7 @@ class NotionQdrant:
 
     async def add_block(self, collection_name: str, block: AnyBlock) -> AnyBlock:
         """Добавляет новый блок в заметку."""
-        text_to_embed = self._extract_text_content(block)
+        text_to_embed = self.extract_text_content(block)
         vector = await asyncio.to_thread(self.model.encode, text_to_embed)
         vector = vector.tolist()
 
@@ -137,7 +137,7 @@ class NotionQdrant:
         return all_results[:limit]
 
     @staticmethod
-    def _extract_text_content(block: AnyBlock) -> str:
+    def extract_text_content(block: AnyBlock) -> str:
         """Извлекает текст из блока для векторизации."""
         if isinstance(block, (TextBlock, HeaderBlock)):
             return " ".join([span.text for span in block.content])
@@ -157,7 +157,7 @@ class NotionQdrant:
         return block.model_dump(mode='json')
 
     @staticmethod
-    def _payload_to_pydantic(payload: dict) -> AnyBlock:
+    def payload_to_pydantic(payload: dict) -> AnyBlock:
         """Конвертирует Qdrant Payload (словарь) обратно в Pydantic модель."""
         block_type = payload.get("type")
 

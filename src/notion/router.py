@@ -13,8 +13,8 @@ def get_file_util() -> FileUtil:
     return FileUtil()
 
 @router.post("/api/notes")
-async def create_note(service: NotionService = Depends(get_notion_service)):
-    collection_name = await service.create_collection()
+async def create_note(user_id: int, service: NotionService = Depends(get_notion_service)):
+    collection_name = await service.create_collection(user_id)
     return {"collection_name": collection_name, "message": "The note has been created successfully."}
 
 @router.delete("/api/notes/{collection_name}")

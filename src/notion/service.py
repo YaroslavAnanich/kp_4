@@ -51,9 +51,9 @@ class NotionService:
 
     ## 💾 CRUD Методы
 
-    async def create_collection(self, collection_name: str = None) -> QdrantCollectionOrm:
+    async def create_collection(self, user_id: int, collection_name: str = None) -> QdrantCollectionOrm:
         collection_name = await self.qdrant.create_collection(collection_name)
-        return self.mysql.add_qdrant_collection(collection_name)
+        return self.mysql.add_qdrant_collection(user_id, collection_name)
 
     async def delete_collection(self, collection_name: str, collection_id: str) -> bool:
         await self.qdrant.delete_collection(collection_name)
@@ -99,7 +99,7 @@ class NotionService:
                     if isinstance(point_id, int):
                         processed_payload['id'] = str(point_id)
 
-                    block = self.qdrant._payload_to_pydantic(processed_payload)
+                    block = self.qdrant.payload_to_pydantic(processed_payload)
 
                     if block.id is not None:
                         block_cache[block.id] = block
@@ -136,8 +136,8 @@ class NotionService:
 
         for result in search_results:
             try:
-                block = self.qdrant._payload_to_pydantic(result['payload'])
-                text_content = self.qdrant._extract_text_content(block).strip()
+                block = self.qdrant.payload_to_pydantic(result['payload'])
+                text_content = self.qdrant.extract_text_content(block).strip()
                 if text_content:
                     text_chunks.append(text_content)
             except Exception:

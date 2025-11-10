@@ -36,8 +36,8 @@ async def create_collection_from_chat(
     collection = await notion_service.create_collection()
     blocks = await tg_service.chat_to_blocks(chat_id, limit)
     for block in blocks:
-        await notion_service.add_block(collection.collection_name, block)
-    return {'collection_name': collection.collection_name}
+        await notion_service.add_block(collection.name, block)
+    return {'collection_name': collection.name}
 
 
 @router.post("/api/telegram/messages/blocks")

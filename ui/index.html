@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Notes App</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <div class="panel left-panel">
+            <button class="action-button create-collection-btn">
+                <i class="fas fa-plus"></i> Create Collection
+            </button>
+
+            <div class="nav-section tags-section">
+                <button class="spoiler-toggle">
+                    <i class="fas fa-caret-right"></i> All Tags
+                </button>
+                <div class="spoiler-content">
+                    <div class="tag-item">
+                        <button class="spoiler-toggle tag-name-btn">
+                            <i class="fas fa-caret-right"></i> #ProjectX
+                        </button>
+                        <ul class="spoiler-content collection-list">
+                            <li>Collection Alpha</li>
+                            <li>Collection Beta</li>
+                        </ul>
+                    </div>
+                    <div class="tag-item">
+                        <button class="spoiler-toggle tag-name-btn">
+                            <i class="fas fa-caret-right"></i> #Ideas
+                        </button>
+                        </div>
+                </div>
+            </div>
+
+            <div class="nav-section collections-section">
+                <button class="spoiler-toggle">
+                    <i class="fas fa-caret-right"></i> All Collections
+                </button>
+                <ul class="spoiler-content collection-list">
+                    <li>My Daily Log</li>
+                    <li>Research Notes</li>
+                    <li>Book Summaries</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="panel center-panel">
+
+            <div class="center-header">
+                <div class="active-collections-area">
+                    <span class="active-tag">Active: **My Daily Log**</span>
+                    <span class="active-tag">Active: **#ProjectX Notes**</span>
+                </div>
+
+                <div class="chat-toggle-group">
+                    <div class="chat-toggle-icons">
+                        <button class="chat-icon telegram-icon"><i class="fab fa-telegram-plane"></i></button>
+                        <button class="chat-icon vk-icon"><i class="fab fa-vk"></i></button>
+                    </div>
+                    <button class="chat-toggle-btn" onclick="this.closest('.center-panel').classList.toggle('collapsed')">
+                        <i class="fas fa-plug"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="center-content-wrapper">
+
+                <div class="sub-panel left-center-panel">
+                    <div class="collection-header">
+                        <h2>Collection Title</h2>
+                        <div class="collection-meta">
+                            <span><i class="fas fa-tags"></i> #tag1, #tag2</span>
+                            <button class="edit-btn"><i class="fas fa-edit"></i></button>
+                        </div>
+                    </div>
+                    <div class="collection-content-area">
+                        <p>This is the content of the selected collection. It can be a rich text editor area.</p>
+                        <p>The structure is designed for focused note-taking and viewing.</p>
+                    </div>
+                </div>
+
+                <div class="sub-panel right-center-panel">
+                    <div class="chat-interface-container">
+                        <div class="chat-list-sidebar">
+                            <h3>Telegram Chats</h3>
+                            <ul class="chat-list">
+                                <li class="chat-item active">Work Group</li>
+                                <li class="chat-item">Friend Chat</li>
+                                <li class="chat-item">Tech News</li>
+                            </ul>
+                        </div>
+                        <div class="chat-content-view">
+                            <div class="chat-header">
+                                <h4>Work Group Chat</h4>
+                            </div>
+                            <div class="chat-messages">
+                                <div class="message incoming">Hello there.</div>
+                                <div class="message outgoing">Got it.</div>
+                            </div>
+                            <div class="chat-input">
+                                <input type="text" placeholder="Reply to chat...">
+                                <button><i class="fas fa-paper-plane"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+        <div class="panel right-panel">
+            <div class="llm-chat-header">
+                <button class="action-button create-chat-btn">
+                    <i class="fas fa-plus"></i> Создать чат
+                </button>
+                <button class="action-button history-btn">
+                    <i class="fas fa-history"></i>
+                </button>
+            </div>
+
+            <div class="llm-chat-messages">
+                <div class="llm-message user-msg">Summarize my 'Research Notes'.</div>
+                <div class="llm-message assistant-msg">Research Notes summary: ...</div>
+            </div>
+
+            <div class="llm-context-area">
+                <p>Context added from: **Collection Title** <button class="remove-context-btn">x</button></p>
+            </div>
+
+            <div class="llm-chat-input">
+                <input type="text" placeholder="Ask the LLM or add context...">
+                <button><i class="fas fa-paper-plane"></i></button>
+            </div>
+
+            <div class="history-window">
+                </div>
+        </div>
+    </div>
+</body>
+</html>

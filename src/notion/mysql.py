@@ -9,11 +9,12 @@ class NotionMysql:
         self.engine = engine
         self.session_factory = session_factory
 
-    def add_qdrant_collection(self, collection_name: str, tag: str | None = None) -> QdrantCollectionOrm:
+    def add_qdrant_collection(self, user_id, name: str, tag_id: str | None = None) -> QdrantCollectionOrm:
         with self.session_factory() as session:
             collection = QdrantCollectionOrm(
-                collection_name=collection_name,
-                tag=tag
+                user_id = user_id,
+                name=name,
+                tag_id=tag_id
             )
             session.add(collection)
             session.commit()
