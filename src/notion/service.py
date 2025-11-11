@@ -3,7 +3,7 @@ from uuid import UUID
 
 from src.core.database import engine, session_factory
 from src.core.utils.file_util import FileUtil
-from src.notion.models import QdrantCollectionOrm
+from src.notion.models import QdrantCollectionOrm, TagOrm
 from src.notion.mysql import NotionMysql
 from src.notion.qdrant import NotionQdrant
 from src.notion.schemes import AnyBlock, ListBlock, TableBlock
@@ -17,56 +17,29 @@ class NotionService:
         self.mysql = NotionMysql(engine=engine, session_factory=session_factory)
         self.file_util = FileUtil()
 
-    ## 🔄 Рекурсивное разрешение вложенных блоков
 
-    def _resolve_nested_blocks(self, block: AnyBlock, block_cache: Dict[UUID, AnyBlock]) -> AnyBlock:
-        """Рекурсивно заменяет UUID в поле 'content' на реальные объекты блоков."""
-        updated_data = block.model_dump()
+    async def create_collection(self, user_id: int, name: str) -> QdrantCollectionOrm:
+        qdrant_id = await self.qdrant.create_collection()
+        return self.mysql.add_qdrant_collection(user_id=user_id, qdrant_id=qdrant_id, name=name)
 
-        # Разрешение списков
-        if isinstance(block, ListBlock):
-            resolved_items = []
-            for item_id in block.content:
-                if item_id in block_cache:
-                    resolved_block = self._resolve_nested_blocks(block_cache[item_id], block_cache)
-                    resolved_items.append(resolved_block)
-            updated_data['content'] = resolved_items
-            return ListBlock(**updated_data)
-
-        # Разрешение таблиц
-        elif isinstance(block, TableBlock):
-            resolved_body = []
-            for row in block.content:
-                resolved_row = []
-                for cell_id in row:
-                    if cell_id in block_cache:
-                        resolved_block = self._resolve_nested_blocks(block_cache[cell_id], block_cache)
-                        resolved_row.append(resolved_block)
-                resolved_body.append(resolved_row)
-            updated_data['content'] = resolved_body
-            return TableBlock(**updated_data)
-
-        # Для остальных блоков нет вложенности, возвращаем их как есть
-        return block
-
-    ## 💾 CRUD Методы
-
-    async def create_collection(self, user_id: int, collection_name: str = None) -> QdrantCollectionOrm:
-        collection_name = await self.qdrant.create_collection(collection_name)
-        return self.mysql.add_qdrant_collection(user_id, collection_name)
-
-    async def delete_collection(self, collection_name: str, collection_id: str) -> bool:
-        await self.qdrant.delete_collection(collection_name)
+    async def delete_collection(self, qdrant_id: str, collection_id: str) -> bool:
+        await self.qdrant.delete_collection(qdrant_id)
         self.mysql.delete_qdrant_collection_by_id(collection_id)
 
-    async def update_qdrant_collection_tag(self, collection_id: str, new_tag: str) -> None:
-        self.mysql.update_qdrant_collection_tag_by_id(collection_id, new_tag)
+    async def update_qdrant_collection(self, collection_id: str, tag_id: str, name: str) -> None:
+        self.mysql.update_qdrant_collection_by_id(collection_id=collection_id, tag_id=tag_id, name=name)
 
-    async def get_qdrant_collection_without_tag(self, user_id: int) -> list[QdrantCollectionOrm]:
-        return self.mysql.get_qdrant_collection_by_user_id_with_null_tag(user_id)
+    async def get_all_qdrant_collections(self, user_id: int) -> list[QdrantCollectionOrm]:
+        return self.mysql.get_all_qdrant_collections_by_user_id(user_id=user_id)
 
-    async def get_all_tags_with_collections(self) -> dict[str, list[QdrantCollectionOrm]]:
-        self.mysql.get_all_tags_with_collections()
+    async def create_tag(self, user_id: int, name: str) -> TagOrm:
+        return self.mysql.add_tag(user_id=user_id ,name=name)
+
+    async def get_all_tags(self, user_id: int) -> TagOrm:
+        return self.mysql.get_unique_tags_by_user_id(user_id=user_id)
+
+    async def delete_tag(self, tag_id: int) -> bool:
+        return self.mysql.delete_tag_by_id(tag_id=tag_id)
 
     async def add_block(self, collection_name: str, block: AnyBlock) -> AnyBlock:
         return await self.qdrant.add_block(collection_name, block)
@@ -145,3 +118,34 @@ class NotionService:
 
         # Ограничиваем общее количество чанков
         return "\n\n".join(text_chunks[:limit]) if text_chunks else "Не найдено релевантной информации."
+
+
+    def _resolve_nested_blocks(self, block: AnyBlock, block_cache: Dict[UUID, AnyBlock]) -> AnyBlock:
+        """Рекурсивно заменяет UUID в поле 'content' на реальные объекты блоков."""
+        updated_data = block.model_dump()
+
+        # Разрешение списков
+        if isinstance(block, ListBlock):
+            resolved_items = []
+            for item_id in block.content:
+                if item_id in block_cache:
+                    resolved_block = self._resolve_nested_blocks(block_cache[item_id], block_cache)
+                    resolved_items.append(resolved_block)
+            updated_data['content'] = resolved_items
+            return ListBlock(**updated_data)
+
+        # Разрешение таблиц
+        elif isinstance(block, TableBlock):
+            resolved_body = []
+            for row in block.content:
+                resolved_row = []
+                for cell_id in row:
+                    if cell_id in block_cache:
+                        resolved_block = self._resolve_nested_blocks(block_cache[cell_id], block_cache)
+                        resolved_row.append(resolved_block)
+                resolved_body.append(resolved_row)
+            updated_data['content'] = resolved_body
+            return TableBlock(**updated_data)
+
+        # Для остальных блоков нет вложенности, возвращаем их как есть
+        return block

@@ -1,10 +1,7 @@
-class User:
-    name = ""
-    password = ""
-    age = 0
+from sentence_transformers import SentenceTransformer
 
-user = User()
-
-user.city = "hello"
-
-print(user.city)
+model = SentenceTransformer('all-MiniLM-L6-v2')
+sentences = ["This is a test sentence"]
+embeddings = model.encode(sentences)
+print(f"Embeddings shape: {embeddings.shape}")
+print("Установка прошла успешно!")

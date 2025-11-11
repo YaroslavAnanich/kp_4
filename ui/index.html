@@ -14,52 +14,36 @@
 <body>
     <div class="app-container">
         <div class="panel left-panel">
-            <button class="action-button create-collection-btn">
-                <i class="fas fa-plus"></i> Create Collection
-            </button>
-
             <div class="nav-section tags-section">
-                <button class="spoiler-toggle">
-                    <i class="fas fa-caret-right"></i> All Tags
-                </button>
-                <div class="spoiler-content">
-                    <div class="tag-item">
-                        <button class="spoiler-toggle tag-name-btn">
-                            <i class="fas fa-caret-right"></i> #ProjectX
-                        </button>
-                        <ul class="spoiler-content collection-list">
-                            <li>Collection Alpha</li>
-                            <li>Collection Beta</li>
-                        </ul>
-                    </div>
-                    <div class="tag-item">
-                        <button class="spoiler-toggle tag-name-btn">
-                            <i class="fas fa-caret-right"></i> #Ideas
-                        </button>
-                        </div>
+                <div class="nav-section-header">
+                    <button class="spoiler-toggle">
+                        <i class="fas fa-caret-right"></i>Tags
+                    </button>
+                    <button class="add-item-btn create-tag-btn" title="Create New Tag">
+                        <i class="fas fa-plus"></i>
+                    </button>
                 </div>
+                <div class="spoiler-content">
+                    </div>
             </div>
 
             <div class="nav-section collections-section">
-                <button class="spoiler-toggle">
-                    <i class="fas fa-caret-right"></i> All Collections
-                </button>
+                <div class="nav-section-header">
+                    <button class="spoiler-toggle">
+                        <i class="fas fa-caret-right"></i>Collections
+                    </button>
+                    <button class="add-item-btn create-collection-btn" title="Create New Collection">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
                 <ul class="spoiler-content collection-list">
-                    <li>My Daily Log</li>
-                    <li>Research Notes</li>
-                    <li>Book Summaries</li>
-                </ul>
+                    </ul>
             </div>
         </div>
 
         <div class="panel center-panel">
 
             <div class="center-header">
-                <div class="active-collections-area">
-                    <span class="active-tag">Active: **My Daily Log**</span>
-                    <span class="active-tag">Active: **#ProjectX Notes**</span>
-                </div>
-
                 <div class="chat-toggle-group">
                     <div class="chat-toggle-icons">
                         <button class="chat-icon telegram-icon"><i class="fab fa-telegram-plane"></i></button>
@@ -72,18 +56,17 @@
             </div>
 
             <div class="center-content-wrapper">
-
                 <div class="sub-panel left-center-panel">
                     <div class="collection-header">
-                        <h2>Collection Title</h2>
+                        <h2 id="collection-name-display">Select a Collection</h2>
+                        <input type="text" id="collection-name-input" class="collection-name-input" value="Select a Collection" style="display: none;">
                         <div class="collection-meta">
-                            <span><i class="fas fa-tags"></i> #tag1, #tag2</span>
-                            <button class="edit-btn"><i class="fas fa-edit"></i></button>
+                            <span id="tag-meta-span"><i class="fas fa-tags"></i> No collection selected</span>
+                            <select id="collection-tag-select" style="display: none;"></select>
                         </div>
                     </div>
                     <div class="collection-content-area">
-                        <p>This is the content of the selected collection. It can be a rich text editor area.</p>
-                        <p>The structure is designed for focused note-taking and viewing.</p>
+                        <p>Please select a collection from the left panel to view its content.</p>
                     </div>
                 </div>
 
@@ -127,13 +110,12 @@
             </div>
 
             <div class="llm-chat-messages">
-                <div class="llm-message user-msg">Summarize my 'Research Notes'.</div>
-                <div class="llm-message assistant-msg">Research Notes summary: ...</div>
+                <div class="llm-message user-msg">Select a collection to start chatting with context</div>
+                <div class="llm-message assistant-msg">I can help you summarize or answer questions about your collections. First, select a collection from the left panel.</div>
             </div>
 
-            <div class="llm-context-area">
-                <p>Context added from: **Collection Title** <button class="remove-context-btn">x</button></p>
-            </div>
+            <div class="llm-context-area" style="display: none;">
+                </div>
 
             <div class="llm-chat-input">
                 <input type="text" placeholder="Ask the LLM or add context...">
@@ -144,5 +126,6 @@
                 </div>
         </div>
     </div>
+<script src="/ui/scripts/left_panel_controller.js"></script>
 </body>
 </html>

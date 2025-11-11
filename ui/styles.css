@@ -40,15 +40,15 @@ body {
     flex-grow: 1;
     display: flex;
     padding: 0;
-    flex-direction: column; /* Основной контейнер - Column */
+    flex-direction: column;
 }
 
-/* НОВЫЙ: Обертка для Left/Right Sub-Panels - ROW FLEX */
+/* Wrapper for Left/Right Sub-Panels - ROW FLEX */
 .center-content-wrapper {
     display: flex;
     flex-grow: 1;
     flex-direction: row;
-    overflow: hidden; /* Важно для предотвращения двойного скролла */
+    overflow: hidden;
 }
 
 /* Right Panel: Fixed Width */
@@ -70,7 +70,7 @@ body {
     background-color: #d9b981;
     color: white;
     border: none;
-    border-radius: 8px;
+    border-radius: 4px; /* Уменьшаем скругление */
     cursor: pointer;
     font-weight: 500;
     text-align: left;
@@ -93,11 +93,47 @@ body {
     margin-bottom: 25px;
 }
 
+.nav-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    transition: background-color 0.2s ease;
+}
+
+.nav-section-header:hover {
+    background-color: transparent; /* Убираем подсветку всего поля */
+}
+
+.add-item-btn {
+    background-color: transparent;
+    border: none;
+    color: #d9b981;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.8em;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.add-item-btn:hover {
+    background-color: #f5f0e8; /* Легкий фон при наведении */
+    color: #c7a56a;
+}
+
+
 .spoiler-toggle {
     width: 100%;
     background: none;
     border: none;
-    padding: 10px 0;
+    padding: 5px 0;
     text-align: left;
     font-size: 0.95em;
     cursor: pointer;
@@ -105,13 +141,14 @@ body {
     font-weight: 500;
     display: flex;
     align-items: center;
-    transition: color 0.2s ease, background-color 0.2s ease;
-    border-radius: 5px;
+    transition: color 0.2s ease;
+    border-radius: 0;
+    flex-grow: 1;
 }
 
 .spoiler-toggle:hover {
-    background-color: #f5f0e8;
-    color: #4a413a;
+    background-color: transparent;
+    color: #d9b981; /* Акцент при наведении */
 }
 
 .spoiler-toggle i {
@@ -125,18 +162,24 @@ body {
     padding-left: 20px;
 }
 
+/* Улучшение внешнего вида левой панели (PyCharm style) */
+.tag-item {
+    margin-bottom: 5px; /* Spacing between tags */
+}
+
 .collection-list {
     list-style: none;
-    padding: 8px 0;
+    padding: 5px 0; /* Tighten up main list */
 }
 
 .collection-list li {
-    padding: 8px 10px;
+    padding: 5px 10px; /* Adjust padding for tighter look */
     cursor: pointer;
     font-size: 0.9em;
     color: #6c6258;
     transition: background-color 0.2s ease, color 0.2s ease;
-    border-radius: 5px;
+    border-radius: 4px;
+    margin-bottom: 2px; /* Small spacing between main collections */
 }
 
 .collection-list li:hover, .collection-list li.active {
@@ -144,10 +187,107 @@ body {
     color: #4a413a;
 }
 
-.tag-name-btn {
-    font-weight: 500;
-    color: #343a40;
+/* --- Стили для списка коллекций под тегами --- */
+.tag-item .tag-collections {
+    list-style: none;
+    padding: 0 0 0 15px; /* Indent the nested list */
+    margin-top: 2px; /* Small gap between tag button and nested list */
 }
+
+/* Применяем стили элементов списка к элементам под тегами */
+.tag-collections .collection-item {
+    padding: 5px 10px;
+    margin-bottom: 2px;
+}
+/* -------------------------------------------------------- */
+
+
+/* --- НОВЫЕ СТИЛИ ДЛЯ КНОПОК УДАЛЕНИЯ (Delete Buttons) --- */
+
+/* Общие стили для кнопки удаления */
+.delete-btn {
+    background: none;
+    border: none;
+    color: #cc6666; /* Нежный красный для удаления */
+    cursor: pointer;
+    font-size: 0.85em;
+    padding: 0;
+    margin-left: 10px;
+    flex-shrink: 0;
+    opacity: 0; /* Скрываем по умолчанию */
+    transition: opacity 0.2s ease, color 0.2s ease;
+}
+
+.delete-btn:hover {
+    color: #990000; /* Более темный красный при наведении */
+}
+
+/* Стили для контейнера элемента списка коллекции */
+.collection-list li, .tag-collections .collection-item {
+    display: flex; /* Делаем flex-контейнером */
+    justify-content: space-between; /* Распределяем содержимое */
+    align-items: center;
+    position: relative; /* Для правильного позиционирования, если потребуется */
+}
+
+.collection-name-text {
+    flex-grow: 1; /* Позволяет тексту занимать доступное место */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* При наведении на элемент коллекции, делаем кнопку удаления видимой */
+.collection-list li:hover .delete-btn,
+.tag-collections .collection-item:hover .delete-btn {
+    opacity: 1;
+}
+
+/* Стили для элемента тега */
+.tag-item {
+    margin-bottom: 5px;
+    /* УДАЛЕНО: Теперь tag-item не является flex-контейнером */
+}
+
+/* ИСПРАВЛЕНИЕ: Новый оберточный контейнер для тега и кнопки удаления */
+.tag-header-wrapper {
+    display: flex;
+    justify-content: space-between; /* Распределяет тег и кнопку */
+    align-items: center;
+}
+
+/* Контейнер для текста тега и кнопки удаления (теперь только текст тега) */
+.tag-item .spoiler-toggle {
+    /* УДАЛЕНО: Стили justify-content и padding-right перемещены в .tag-header-wrapper */
+    flex-grow: 1; /* Кнопка тега занимает всю доступную ширину */
+    justify-content: flex-start;
+}
+
+/* Оборачивающий span для текста тега */
+.tag-item .toggle-content {
+    display: flex;
+    align-items: center;
+    flex-grow: 1;
+    overflow: hidden; /* Важно для обрезки длинного текста тега */
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Кнопка удаления тега внутри .tag-header-wrapper */
+.delete-tag-btn {
+    opacity: 0; /* Скрываем по умолчанию */
+    margin-left: 15px; /* Увеличиваем отступ от текста */
+    pointer-events: auto; /* Убеждаемся, что кнопка кликабельна */
+}
+
+/* При наведении на элемент тега, делаем кнопку удаления тега видимой */
+.tag-item:hover .delete-tag-btn {
+    opacity: 1;
+}
+
+/* УДАЛЕНО: Правила для вложенной кнопки, т.к. она была невалидной. */
+/* -------------------------------------------------------- */
+
 
 /* --- Center Panel Specific Styles --- */
 .sub-panel {
@@ -156,7 +296,6 @@ body {
 }
 
 .left-center-panel {
-    /* Collection Content: Order 1 (Left) */
     flex-grow: 2;
     min-width: 450px;
     order: 1;
@@ -167,21 +306,19 @@ body {
 }
 
 .right-center-panel {
-    /* External Chats: Order 2 (Right) */
     flex-grow: 1;
-    min-width: 300px; /* Минимальная ширина по умолчанию */
+    min-width: 300px;
     background-color: #fdfbf7;
     order: 2;
-    border-right: none;
     border-left: 1px solid #e8e4db;
     padding: 0;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    transition: all 0.3s ease-out; /* Анимация сворачивания */
+    transition: all 0.3s ease-out;
 }
 
-/* Свернутое состояние панели чатов (применяется к CENTER-PANEL) */
+/* Свернутое состояние панели чатов */
 .center-panel.collapsed .right-center-panel {
     flex-grow: 0;
     width: 0;
@@ -190,7 +327,6 @@ body {
     padding: 0;
 }
 
-/* Скрываем содержимое при сворачивании */
 .center-panel.collapsed .right-center-panel .chat-interface-container {
     display: none;
 }
@@ -199,20 +335,22 @@ body {
 /* Collection Content Styles */
 .collection-header {
     margin-bottom: 25px;
-    flex-shrink: 0; /* Не сжимать заголовок */
+    flex-shrink: 0;
 }
 
+/* --- Компактный и современный заголовок коллекции --- */
 .collection-header h2 {
     font-family: 'Poppins', sans-serif;
-    font-size: 2em;
+    font-size: 1.5em; /* Уменьшаем размер шрифта */
     font-weight: 600;
-    margin-bottom: 8px;
+    margin-bottom: 5px; /* Уменьшаем отступ */
     color: #312c26;
 }
+/* ------------------------------------------------------------------ */
 
 .collection-meta {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
     align-items: center;
     color: #888;
     font-size: 0.85em;
@@ -223,28 +361,12 @@ body {
     color: #b3ae9b;
 }
 
-.edit-btn {
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: #d9b981;
-    font-size: 0.9em;
-    padding: 5px 8px;
-    border-radius: 5px;
-    transition: background-color 0.2s ease, color 0.2s ease;
-}
-
-.edit-btn:hover {
-    background-color: #fcf4e3;
-    color: #c7a56a;
-}
-
 .collection-content-area {
     line-height: 1.7;
     font-size: 1.05em;
     color: #4a413a;
-    flex-grow: 1; /* Позволяет контенту занимать оставшееся место */
-    overflow-y: auto; /* Скролл только для контента коллекции */
+    flex-grow: 1;
+    overflow-y: auto;
 }
 .collection-content-area p {
     margin-bottom: 1em;
@@ -252,46 +374,24 @@ body {
 
 /* --- Center Header Styles --- */
 .center-header {
-    height: 55px; /* Фиксированная высота хедера */
+    height: 55px;
     flex-shrink: 0;
-    border-bottom: 1px solid #e8e4db; /* Нижняя граница */
+    border-bottom: 1px solid #e8e4db;
     background-color: #f9f5f0;
-    padding: 0 30px; /* Отступы по бокам */
+    padding: 0 30px;
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-end; /* Выравниваем элементы вправо */
     align-items: center;
-}
-
-.active-collections-area {
-    display: flex;
-    gap: 15px;
-    font-size: 0.9em;
-    color: #6c6258;
-}
-
-.active-tag {
-    background-color: #f1ede5;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-.active-tag:hover {
-    background-color: #e8e4db;
 }
 
 .chat-toggle-group {
     display: flex;
     align-items: center;
-    gap: 15px; /* Промежуток между иконками и кнопкой */
+    gap: 15px;
 }
-
 
 /* Right-Center: External Chats (UI) */
 
-/* Стили для контейнера иконок Telegram/VK */
 .chat-toggle-icons {
     display: flex;
 }
@@ -314,7 +414,6 @@ body {
 .telegram-icon { color: #8a6d4b; }
 .vk-icon { color: #7a7051; }
 
-/* Стили для кнопки "Интеграции" (chat-toggle-btn) */
 .chat-toggle-btn {
     background-color: #f5f0e8;
     border: 1px solid #e8e4db;
@@ -325,10 +424,8 @@ body {
     flex-shrink: 0;
     display: flex;
     align-items: center;
-    justify-content: center; /* Центрируем иконку */
+    justify-content: center;
     font-weight: 500;
-
-    /* ВСЕГДА КРУГЛАЯ КНОПКА */
     width: 40px;
     height: 40px;
     padding: 0;
@@ -342,8 +439,6 @@ body {
 .chat-toggle-btn i {
     margin: 0;
 }
-
-/* УДАЛЕНЫ ВСЕ СТИЛИ, МЕНЯЮЩИЕ КНОПКУ ПРИ .collapsed */
 
 .chat-interface-container {
     display: flex;
@@ -376,7 +471,7 @@ body {
     cursor: pointer;
     font-size: 0.9em;
     color: #6c6258;
-    border-radius: 6px;
+    border-radius: 4px; /* Уменьшаем скругление */
     margin-bottom: 5px;
     transition: background-color 0.2s ease, color 0.2s ease;
 }
@@ -418,7 +513,7 @@ body {
 
 .message {
     padding: 10px 15px;
-    border-radius: 18px;
+    border-radius: 10px; /* Уменьшаем скругление */
     margin-bottom: 10px;
     max-width: 75%;
     font-size: 0.95em;
@@ -450,7 +545,7 @@ body {
     flex-grow: 1;
     padding: 10px 15px;
     border: 1px solid #d4d0c5;
-    border-radius: 20px;
+    border-radius: 4px; /* Уменьшаем скругление */
     margin-right: 10px;
     font-size: 0.95em;
     outline: none;
@@ -485,7 +580,7 @@ body {
 /* --- Right Panel Specific Styles (LLM Chat) --- */
 .llm-chat-header {
     display: flex;
-    justify-content: space-between; /* Прижимает кнопки к краям */
+    justify-content: space-between;
     align-items: center;
     padding: 0 0 20px 0;
 }
@@ -495,11 +590,10 @@ body {
     width: auto;
     padding: 8px 15px;
     font-size: 0.85em;
-    border-radius: 6px;
+    border-radius: 4px; /* Уменьшаем скругление */
     margin-bottom: 0;
     height: auto;
 
-    /* Стили цвета и отображения */
     background-color: #d9b981;
     color: white;
     display: flex;
@@ -523,7 +617,6 @@ body {
     justify-content: center;
     flex-shrink: 0;
 
-    /* Общий цвет для обеих */
     background-color: #d9b981;
     color: white;
     transition: background-color 0.2s ease;
@@ -537,7 +630,6 @@ body {
     margin: 0;
 }
 
-/* Общий hover для обеих кнопок */
 .create-chat-btn:hover, .history-btn:hover {
     background-color: #c7a56a;
 }
@@ -548,29 +640,16 @@ body {
     overflow-y: auto;
     padding-right: 20px;
     margin-bottom: 15px;
-    scrollbar-width: thin;
-    scrollbar-color: #d4d0c5 #f9f5f0;
+    scrollbar-width: auto;
 }
 
-/* Custom scrollbar for Webkit browsers */
-.llm-chat-messages::-webkit-scrollbar {
-    width: 8px;
-}
+/* Удаляем кастомные стили Webkit scrollbar */
+.llm-chat-messages::-webkit-scrollbar { display: none; }
 
-.llm-chat-messages::-webkit-scrollbar-track {
-    background: #f9f5f0;
-    border-radius: 10px;
-}
-
-.llm-chat-messages::-webkit-scrollbar-thumb {
-    background-color: #d4d0c5;
-    border-radius: 10px;
-    border: 2px solid #f9f5f0;
-}
 
 .llm-message {
     padding: 12px 18px;
-    border-radius: 18px;
+    border-radius: 10px; /* Уменьшаем скругление */
     margin-bottom: 12px;
     line-height: 1.6;
     font-size: 0.95em;
@@ -589,31 +668,12 @@ body {
     max-width: 90%;
 }
 
+/* Удаляем llm-context-area (скрыт в HTML) */
 .llm-context-area {
-    padding: 10px 15px;
-    background-color: #faedcd;
-    border: 1px solid #f7e6b5;
-    border-radius: 6px;
-    margin-bottom: 15px;
-    font-size: 0.85em;
-    color: #856404;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+    display: none;
 }
-
 .remove-context-btn {
-    background: none;
-    border: none;
-    color: #cc3300;
-    cursor: pointer;
-    font-weight: bold;
-    font-size: 1.1em;
-    padding: 0 5px;
-    transition: color 0.2s ease;
-}
-.remove-context-btn:hover {
-    color: #a82a00;
+    display: none;
 }
 
 
@@ -629,7 +689,7 @@ body {
     flex-grow: 1;
     padding: 12px 18px;
     border: 1px solid #d4d0c5;
-    border-radius: 25px;
+    border-radius: 4px; /* Уменьшаем скругление */
     margin-right: 10px;
     font-size: 0.95em;
     outline: none;
@@ -662,19 +722,49 @@ body {
     background-color: #c7a56a;
 }
 
-/* History Window (Example placeholder, needs JS to appear) */
+/* Удаляем History Window (скрыт в HTML) */
 .history-window {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background-color: white;
-    border: 1px solid #e8e4db;
-    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
-    padding: 25px;
-    z-index: 1000;
-    width: 80%;
-    max-width: 600px;
-    border-radius: 10px;
     display: none;
+}
+
+/* --- СТИЛИ ДЛЯ РЕДАКТИРУЕМОГО ЗАГОЛОВКА КОЛЛЕКЦИИ (Обновлено) --- */
+.collection-name-input {
+    font-family: 'Poppins', sans-serif;
+    font-size: 1.5em; /* Уменьшаем размер шрифта */
+    font-weight: 600;
+    margin-bottom: 5px;
+    color: #312c26;
+    border: 1px solid #e8e4db;
+    padding: 5px 8px; /* Добавляем отступы */
+    border-radius: 4px;
+    width: 100%;
+    max-width: 400px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.collection-name-input:focus {
+    border-color: #d9b981;
+}
+
+#collection-tag-select {
+    border: 1px solid #d4d0c5;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    color: #4a413a;
+    margin-left: 5px;
+    background-color: #fcfcf5;
+}
+
+.collection-meta {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    color: #888;
+    font-size: 0.85em;
+}
+.collection-meta span {
+    display: flex;
+    align-items: center;
 }

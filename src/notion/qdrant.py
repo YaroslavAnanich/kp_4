@@ -26,11 +26,9 @@ class NotionQdrant:
         self.model = SentenceTransformer(EMBEDDING_MODEL_NAME)
         print(f"Используется модель для векторизации: {EMBEDDING_MODEL_NAME}")
 
-    async def create_collection(self, collection_name: str = None) -> str:
+    async def create_collection(self) -> str:
         """Создает новую коллекцию (заметку)."""
-        if collection_name is None:
-            collection_name = str(uuid.uuid4())
-
+        collection_name = str(uuid.uuid4())
         await self.client.recreate_collection(
             collection_name=collection_name,
             vectors_config=VectorParams(size=EMBEDDING_VECTOR_SIZE, distance=Distance.COSINE),

@@ -1,4 +1,4 @@
-from fastapi import Depends, APIRouter
+from fastapi import Depends, APIRouter, Query
 from functools import lru_cache
 from src.notion.router import get_notion_service
 from src.notion.service import NotionService
@@ -12,12 +12,12 @@ router = APIRouter(tags=["telegram"])
 def get_telegram_service() -> TelegramService:
     return TelegramService(api_hash=telegram_settings.TG_API_HASH, api_id=telegram_settings.TG_API_ID)
 
-@router.get("/api/telegram/chats")
+@router.get("/tg/chats")
 async def get_all_user_chats(service: TelegramService = Depends(get_telegram_service)):
     chats = await service.get_all_chats()
     return {'chats': chats}
 
-@router.get("/api/telegram/chats/{chat_id}/messages")
+@router.get("/tg/chats/{chat_id}/messages")
 async def get_chat_messages(
     chat_id: int,
     limit: int,
@@ -26,7 +26,7 @@ async def get_chat_messages(
     messages = await service.get_messages_from_chat(chat_id, limit)
     return {'messages': messages}
 
-@router.post("/api/telegram/chats/{chat_id}/collection")
+@router.post("/tg/chats/{chat_id}/collection")
 async def create_collection_from_chat(
     chat_id: int,
     limit: int,
@@ -36,10 +36,10 @@ async def create_collection_from_chat(
     collection = await notion_service.create_collection()
     blocks = await tg_service.chat_to_blocks(chat_id, limit)
     for block in blocks:
-        await notion_service.add_block(collection.name, block)
-    return {'collection_name': collection.name}
+        await notion_service.add_block(collection.qdrant_id, block)
+    return {'collection_name': collection.qdrant_id}
 
 
-@router.post("/api/telegram/messages/blocks")
+@router.post("/tg/messages/blocks")
 async def message_to_block(message: MessageSchema, service: TelegramService = Depends(get_telegram_service)):
     return await service.message_to_block(message=message)

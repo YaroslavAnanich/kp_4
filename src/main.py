@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.core.api import main_router
 from src.core.database import Base, engine
 
+
 app = FastAPI()
 
 app.include_router(main_router)

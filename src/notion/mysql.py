@@ -1,7 +1,5 @@
 from sqlalchemy import select, update
-
-from src.llm.models import ChatCollectionOrm, ChatOrm
-from src.notion.models import QdrantCollectionOrm
+from src.notion.models import QdrantCollectionOrm, TagOrm
 
 
 class NotionMysql:
@@ -9,12 +7,12 @@ class NotionMysql:
         self.engine = engine
         self.session_factory = session_factory
 
-    def add_qdrant_collection(self, user_id, name: str, tag_id: str | None = None) -> QdrantCollectionOrm:
+    def add_qdrant_collection(self, user_id: int, qdrant_id: str, name: str) -> QdrantCollectionOrm:
         with self.session_factory() as session:
             collection = QdrantCollectionOrm(
                 user_id = user_id,
-                name=name,
-                tag_id=tag_id
+                qdrant_id=qdrant_id,
+                name=name
             )
             session.add(collection)
             session.commit()
@@ -34,48 +32,60 @@ class NotionMysql:
                 return True
             return False
 
-    def update_qdrant_collection_tag_by_id(self, collection_id: str, new_tag: str) -> None:
+    def update_qdrant_collection_by_id(self, collection_id: str, tag_id: int, name: str) -> None:
+
         with self.session_factory() as session:
             query = (
                 update(QdrantCollectionOrm)
                 .where(QdrantCollectionOrm.id == collection_id)
-                .values(tag=new_tag)
+                .values(tag_id=tag_id, name=name)
             )
             session.execute(query)
             session.commit()
 
-    def get_qdrant_collection_by_user_id_with_null_tag(self, user_id: int) -> list[QdrantCollectionOrm]:
+
+
+    def get_all_qdrant_collections_by_user_id(self, user_id: int) -> list[QdrantCollectionOrm]:
         with self.session_factory() as session:
             query = (
                 select(QdrantCollectionOrm)
-                .select_from(QdrantCollectionOrm)
-                .join(ChatCollectionOrm, QdrantCollectionOrm.id == ChatCollectionOrm.qdrant_collection_id)
-                .join(ChatOrm, ChatCollectionOrm.chat_id == ChatOrm.id)
-                .where(
-                    ChatOrm.user_id == user_id,
-                    QdrantCollectionOrm.tag.is_(None)
-                )
+                .where(QdrantCollectionOrm.user_id == user_id)
             )
             result = session.execute(query)
             return result.scalars().all()
 
-    def get_all_tags_with_collections(self) -> dict[str, list[QdrantCollectionOrm]]:
+    def add_tag(self, user_id: int, name: str) -> TagOrm:
         with self.session_factory() as session:
-            # Получаем все коллекции, у которых есть тег (tag не NULL)
+            existing_tag = session.execute(
+                select(TagOrm).where(TagOrm.name == name)
+            ).scalar_one_or_none()
+
+            if existing_tag:
+                return existing_tag
+
+            tag = TagOrm(user_id=user_id, name=name)
+            session.add(tag)
+            session.commit()
+            session.refresh(tag)
+            return tag
+
+    def get_unique_tags_by_user_id(self, user_id: int) -> list[TagOrm]:
+        with self.session_factory() as session:
             query = (
-                select(QdrantCollectionOrm)
-                .where(QdrantCollectionOrm.tag.is_not(None))
-                .order_by(QdrantCollectionOrm.tag)
+                select(TagOrm)
+                .where(TagOrm.user_id == user_id)
             )
             result = session.execute(query)
-            collections = result.scalars().all()
+            return result.scalars().all()
 
-            # Группируем коллекции по тегам
-            tags_with_collections = {}
-            for collection in collections:
-                tag = collection.tag
-                if tag not in tags_with_collections:
-                    tags_with_collections[tag] = []
-                tags_with_collections[tag].append(collection)
+    def delete_tag_by_id(self, tag_id: int) -> bool:
+        with self.session_factory() as session:
+            tag = session.execute(
+                select(TagOrm).where(TagOrm.id == tag_id)
+            ).scalar_one_or_none()
 
-            return tags_with_collections
+            if tag:
+                session.delete(tag)
+                session.commit()
+                return True
+            return False
