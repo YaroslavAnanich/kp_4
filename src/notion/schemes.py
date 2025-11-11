@@ -16,6 +16,10 @@ class BlockType(str, Enum):
     FILE = "file"
     LINK = "link"
 
+class ListType(str, Enum):
+    """Определяет тип блока контента."""
+    BULLET = "bullet"
+    NUMBER = "number"
 
 # --- Styles ---
 
@@ -29,28 +33,7 @@ class TextStyle(BaseModel):
     backgroundColor: str | None = None
 
 
-class BlockStyle(BaseModel):
-    """Общие стили для блочных элементов."""
-    align: str = "left"
 
-
-class TableStyle(BlockStyle):
-    """Стили для таблиц."""
-    border: bool = True
-    borderColor: str = "black"
-    columnCount: int = 3
-
-
-class ListStyle(BlockStyle):
-    """Стили для списков."""
-    bulletType: str = "circle"  # circle, square
-
-
-class FileStyle(BlockStyle):
-    """Стили для файлов."""
-    width: str | None = None
-    height: str | None = None
-    display: str = "inline"  # inline, block
 
 
 # --- Text Content ---
@@ -68,7 +51,6 @@ class Block(BaseModel):
     id: str = None
     type: BlockType
     order: int | None = None # если None, то вложен в какой-то другой блок
-    style: BlockStyle = Field(default_factory=BlockStyle)
 
 
 
@@ -78,7 +60,6 @@ class TextBlock(Block):
     """Блок обычного текста (параграф)."""
     type: BlockType = BlockType.TEXT
     content: list[TextSpan]
-    style: BlockStyle = Field(default_factory=BlockStyle)
 
 
 class HeaderBlock(Block):
@@ -86,38 +67,36 @@ class HeaderBlock(Block):
     type: BlockType = BlockType.HEADER
     content: list[TextSpan]
     level: int = 1  # уровень заголовка (1-6)
-    style: BlockStyle = Field(default_factory=BlockStyle)
 
 
 class TableBlock(Block):
     """Блок таблицы."""
     type: BlockType = BlockType.TABLE
     content: list[list[UUID | dict]]
-    style: TableStyle = Field(default_factory=TableStyle)
+    row_count: int = 3
+    column_count: int = 3
+
 
 
 class FileBlock(Block):
     """Блок файла (изображение, PDF и т.д.)."""
     type: BlockType = BlockType.FILE
     media_type: MediaType
-    file_name: str
-    server_name: str| None = None #При добавлении блока всегда None
-    style: FileStyle = Field(default_factory=FileStyle)
+    file_name:  str | None = None
+    file_path: str | None = None #При добавлении блока всегда None
 
 
 class ListBlock(Block):
     """Блок маркированного списка."""
     type: BlockType = BlockType.LIST
-    list_type: str
+    list_type: ListType
     content: list[UUID | dict]
-    style: ListStyle = Field(default_factory=ListStyle)
-
 
 
 class LinkBlock(Block):
     type: BlockType = BlockType.LINK
+    media_type: MediaType = MediaType.LINK
     content: str = ""
-    style: BlockStyle = Field(default_factory=BlockStyle)
 
 
 AnyBlock = TextBlock | HeaderBlock | TableBlock | FileBlock | ListBlock | LinkBlock

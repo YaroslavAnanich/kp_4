@@ -46,10 +46,7 @@ class NotionQdrant:
         text_to_embed = self.extract_text_content(block)
         vector = await asyncio.to_thread(self.model.encode, text_to_embed)
         vector = vector.tolist()
-
-        if block.id is not str(uuid.uuid4()):
-            block.id = str(uuid.uuid4())
-
+        block.id = str(uuid.uuid4())
         payload = self._pydantic_to_payload(block)
 
         await self.client.upsert(
@@ -76,7 +73,23 @@ class NotionQdrant:
 
     async def update_block(self, collection_name: str, block: AnyBlock) -> AnyBlock:
         """Обновляет блок в коллекции."""
-        return await self.add_block(collection_name, block)
+        text_to_embed = self.extract_text_content(block)
+        vector = await asyncio.to_thread(self.model.encode, text_to_embed)
+        vector = vector.tolist()
+        payload = self._pydantic_to_payload(block)
+
+        await self.client.upsert(
+            collection_name=collection_name,
+            points=[
+                PointStruct(
+                    id=block.id,
+                    vector=vector,
+                    payload=payload,
+                )
+            ],
+            wait=True,
+        )
+        return block
 
     async def get_collection_blocks(self, collection_name: str) -> List[Dict[str, Any]]:
         """Получает все блоки из коллекции в виде сырых данных."""
@@ -142,7 +155,7 @@ class NotionQdrant:
 
         if isinstance(block, FileBlock):
             if block.media_type == MediaType.DOCUMENT:
-                file_text = FileUtil().get_file_text(block.server_name)
+                file_text = FileUtil().get_file_text(block.file_path)
                 return file_text
             else:
                 return ""

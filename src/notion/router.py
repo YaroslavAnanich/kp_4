@@ -1,3 +1,5 @@
+import uuid
+
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, Path
 from starlette.responses import FileResponse
 from src.notion.schemes import AnyBlock
@@ -58,14 +60,14 @@ async def get_note(collection_name: str, service: NotionService = Depends(get_no
 async def add_block_to_note(
     collection_name: str,
     block: AnyBlock,
-    file: UploadFile | None = None,
-    service: NotionService = Depends(get_notion_service)
+    service: NotionService = Depends(get_notion_service),
 ):
-    file_util = get_file_util()
-    if file:
-        block.server_name = file_util.save_file(file.file)
     qdrant_block = await service.add_block(collection_name, block)
     return qdrant_block
+
+@router.post("/files/{server_name}")
+async def get_file(file: UploadFile, file_util: FileUtil = Depends(get_file_util)):
+    return file_util.save_file(file=file.file, filename=file.filename)
 
 @router.put("/notes/{collection_name}/blocks/{block_id}")
 async def update_block_in_note(
@@ -85,11 +87,5 @@ async def delete_block_from_note(
     await service.delete_block(collection_name, block_id)
     return {"block_id": block_id, "message": "The block has been successfully deleted."}
 
-@router.get("/files/{server_name}")
-async def get_file(server_name: str):
-    file_path = f"./var/files/{server_name}"
-    return FileResponse(
-        path=file_path,
-        filename=server_name,
-        media_type='application/octet-stream'
-    )
+
+

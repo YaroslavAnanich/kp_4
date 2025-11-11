@@ -61,13 +61,11 @@ class NotionService:
         block_cache: Dict[UUID, AnyBlock] = {}
 
         for point in points:
-            # Теперь point гарантированно словарь
             payload = point.get('payload')
             point_id = point.get('id')
 
             if payload and point_id is not None:
                 try:
-                    # Создаем копию payload для модификации
                     processed_payload = payload.copy()
                     if isinstance(point_id, int):
                         processed_payload['id'] = str(point_id)
@@ -75,25 +73,80 @@ class NotionService:
                     block = self.qdrant.payload_to_pydantic(processed_payload)
 
                     if block.id is not None:
-                        block_cache[block.id] = block
+                        # Нормализуем UUID к одному типу
+                        normalized_id = UUID(str(block.id))
+                        block_cache[normalized_id] = block
+                        print(f"✅ Добавлен в кэш: {normalized_id} ({block.type})")
 
                 except Exception as e:
-                    print(f"Ошибка десериализации блока {point_id}: {e}")
+                    print(f"❌ Ошибка десериализации блока {point_id}: {e}")
                     continue
 
-        # 3. Разрешаем вложенные блоки и отбираем только корневые блоки
+        # Отладочная информация
+        print(f"📦 Всего блоков в кэше: {len(block_cache)}")
+        print("🔍 ID в кэше:", [str(id) for id in block_cache.keys()])
+
+        # 3. Разрешаем вложенные блоки
         resolved_root_blocks: List[AnyBlock] = []
 
         for block_id, block in block_cache.items():
             if hasattr(block, 'order') and block.order is not None:
+                print(f"🔄 Обрабатываем корневой блок: {block_id} ({block.type})")
+                if hasattr(block, 'content'):
+                    print(f"   Content: {block.content}")
                 resolved_block = self._resolve_nested_blocks(block, block_cache)
                 resolved_root_blocks.append(resolved_block)
 
-        # 4. Сортируем корневые блоки по полю 'order'
+        # 4. Сортируем и возвращаем
         resolved_root_blocks.sort(key=lambda block: block.order)
-
-        # 5. Возвращаем готовую схему
         return resolved_root_blocks
+
+    def _resolve_nested_blocks(self, block: AnyBlock, block_cache: Dict[UUID, AnyBlock]) -> AnyBlock:
+        """Рекурсивно заменяет UUID в поле 'content' на реальные объекты блоков."""
+
+        if not hasattr(block, 'content') or block.content is None:
+            return block
+
+        updated_data = block.model_dump()
+
+        # Разрешение списков
+        if isinstance(block, ListBlock):
+            print(f"📝 Обрабатываем ListBlock: {block.id}")
+            resolved_items = []
+            for item_id in block.content:
+                normalized_id = UUID(str(item_id))
+                print(f"   🔍 Ищем элемент: {normalized_id}")
+                if normalized_id in block_cache:
+                    print(f"   ✅ Найден в кэше: {normalized_id}")
+                    nested_block = block_cache[normalized_id]
+                    # Преобразуем блок в dict для content
+                    resolved_items.append(nested_block.model_dump())
+                else:
+                    print(f"   ❌ Не найден в кэше: {normalized_id}")
+                    resolved_items.append(item_id)
+            updated_data['content'] = resolved_items
+            return ListBlock(**updated_data)
+
+        # Разрешение таблиц
+        elif isinstance(block, TableBlock):
+            resolved_body = []
+            for row in block.content:
+                resolved_row = []
+                for cell_id in row:
+                    normalized_id = UUID(str(cell_id))
+                    if normalized_id in block_cache:
+                        nested_block = block_cache[normalized_id]
+                        # Преобразуем блок в dict для content
+                        resolved_row.append(nested_block.model_dump())
+                    else:
+                        resolved_row.append(cell_id)
+                resolved_body.append(resolved_row)
+            updated_data['content'] = resolved_body
+            return TableBlock(**updated_data)
+
+        # Для остальных блоков
+        return block
+
 
     async def search_in_notion(self, query_text: str, collection_names: List[str], limit: int = 10) -> str:
         """
@@ -118,34 +171,3 @@ class NotionService:
 
         # Ограничиваем общее количество чанков
         return "\n\n".join(text_chunks[:limit]) if text_chunks else "Не найдено релевантной информации."
-
-
-    def _resolve_nested_blocks(self, block: AnyBlock, block_cache: Dict[UUID, AnyBlock]) -> AnyBlock:
-        """Рекурсивно заменяет UUID в поле 'content' на реальные объекты блоков."""
-        updated_data = block.model_dump()
-
-        # Разрешение списков
-        if isinstance(block, ListBlock):
-            resolved_items = []
-            for item_id in block.content:
-                if item_id in block_cache:
-                    resolved_block = self._resolve_nested_blocks(block_cache[item_id], block_cache)
-                    resolved_items.append(resolved_block)
-            updated_data['content'] = resolved_items
-            return ListBlock(**updated_data)
-
-        # Разрешение таблиц
-        elif isinstance(block, TableBlock):
-            resolved_body = []
-            for row in block.content:
-                resolved_row = []
-                for cell_id in row:
-                    if cell_id in block_cache:
-                        resolved_block = self._resolve_nested_blocks(block_cache[cell_id], block_cache)
-                        resolved_row.append(resolved_block)
-                resolved_body.append(resolved_row)
-            updated_data['content'] = resolved_body
-            return TableBlock(**updated_data)
-
-        # Для остальных блоков нет вложенности, возвращаем их как есть
-        return block

@@ -101,14 +101,12 @@ class TelegramService:
 
                 for attr in document.attributes:
                     attr_name = type(attr).__name__
-                    if 'Video' in attr_name:
-                        media_type = MediaType.VIDEO
-                    elif 'Audio' in attr_name:
+                    if 'Audio' in attr_name:
                         media_type = MediaType.AUDIO
                     elif 'Sticker' in attr_name:
-                        media_type = MediaType.STICKER
+                        media_type = MediaType.PHOTO
                     elif 'Animated' in attr_name or 'Gif' in attr_name:
-                        media_type = MediaType.GIF
+                        media_type = MediaType.PHOTO
 
                 for attr in document.attributes:
                     if hasattr(attr, 'file_name') and attr.file_name:
@@ -206,7 +204,7 @@ class TelegramService:
 
             return FileBlock(
                 file_name=message.file_name or "unknown_file",
-                server_name=server_name,
+                file_path=server_name,
                 media_type=message.media_type
             )
 
