@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException, Depends, Query
 from src.core.database import engine, session_factory
 from src.llm.schemes import AddNotionContextScheme
-from src.llm.service import LlmService
-from src.notion.service import NotionService
+from src.llm.llm_service import LlmService
+from src.notion.notion_service import NotionService
 from functools import lru_cache
 
 router = APIRouter(tags=["llm"])

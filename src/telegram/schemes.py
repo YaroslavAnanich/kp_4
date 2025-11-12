@@ -19,3 +19,4 @@ class MessageSchema(BaseModel):
     sender_name: Optional[str] = Field(None, description="Имя отправителя сообщения")
     media_type: Optional[MediaType] = Field(None, description="Тип медиа-контента")
     file_name: Optional[str] = Field(None, description="Имя файла, если применимо")
+

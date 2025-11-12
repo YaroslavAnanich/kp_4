@@ -1,9 +1,9 @@
 from fastapi import Depends, APIRouter, Query
 from functools import lru_cache
 from src.notion.router import get_notion_service
-from src.notion.service import NotionService
+from src.notion.notion_service import NotionService
 from src.telegram.schemes import MessageSchema
-from src.telegram.service import TelegramService
+from src.telegram.telegram_service import TelegramService
 from src.telegram.config import telegram_settings
 
 router = APIRouter(tags=["telegram"])

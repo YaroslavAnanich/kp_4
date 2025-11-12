@@ -3,7 +3,7 @@ import uuid
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, Path
 from starlette.responses import FileResponse
 from src.notion.schemes import AnyBlock
-from src.notion.service import NotionService
+from src.notion.notion_service import NotionService
 from src.core.utils.file_util import FileUtil
 from functools import lru_cache
 
