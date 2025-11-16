@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Notes App</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="/ui/notion/style.css">
+    <link rel="stylesheet" href="/ui/integration/style.css">
+    <link rel="stylesheet" href="/ui/llm/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,94 +15,91 @@
 </head>
 <body>
     <div class="app-container">
-        <div class="panel left-panel">
-            <div class="nav-section tags-section">
-                <div class="nav-section-header">
-                    <button class="spoiler-toggle">
-                        <i class="fas fa-caret-right"></i>Tags
-                    </button>
-                    <button class="add-item-btn create-tag-btn" title="Create New Tag">
-                        <i class="fas fa-plus"></i>
-                    </button>
-                </div>
-                <div class="spoiler-content">
+        <!-- NOTION SECTION -->
+        <div class="notion-section">
+            <div class="notion-sidebar">
+                <div class="nav-section tags-section">
+                    <div class="nav-section-header">
+                        <button class="spoiler-toggle">
+                            <i class="fas fa-caret-right"></i>Tags
+                        </button>
+                        <button class="add-item-btn create-tag-btn" title="Create New Tag">
+                            <i class="fas fa-plus"></i>
+                        </button>
                     </div>
+                    <div class="spoiler-content">
+                    </div>
+                </div>
+
+                <div class="nav-section collections-section">
+                    <div class="nav-section-header">
+                        <button class="spoiler-toggle">
+                            <i class="fas fa-caret-right"></i>Collections
+                        </button>
+                        <button class="add-item-btn create-collection-btn" title="Create New Collection">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                    <ul class="spoiler-content collection-list">
+                    </ul>
+                </div>
             </div>
 
-            <div class="nav-section collections-section">
-                <div class="nav-section-header">
-                    <button class="spoiler-toggle">
-                        <i class="fas fa-caret-right"></i>Collections
-                    </button>
-                    <button class="add-item-btn create-collection-btn" title="Create New Collection">
-                        <i class="fas fa-plus"></i>
-                    </button>
+            <div class="notion-content">
+                <div class="notion-header">
+                    <h2 id="collection-name-display">Select a Collection</h2>
+                    <input type="text" id="collection-name-input" class="collection-name-input" value="Select a Collection" style="display: none;">
+                    <div class="collection-meta">
+                        <span id="tag-meta-span"><i class="fas fa-tags"></i> No collection selected</span>
+                        <select id="collection-tag-select" style="display: none;"></select>
+                    </div>
                 </div>
-                <ul class="spoiler-content collection-list">
-                    </ul>
+                <div class="notion-page">
+                    <p>Please select a collection from the left panel to view its content.</p>
+                </div>
             </div>
         </div>
 
-        <div class="panel center-panel">
-
-            <div class="center-header">
+        <!-- INTEGRATION SECTION -->
+        <div class="integration-section">
+            <div class="integration-header">
                 <div class="chat-toggle-group">
                     <div class="chat-toggle-icons">
                         <button class="chat-icon telegram-icon"><i class="fab fa-telegram-plane"></i></button>
                         <button class="chat-icon vk-icon"><i class="fab fa-vk"></i></button>
                     </div>
-                    <button class="chat-toggle-btn" onclick="this.closest('.center-panel').classList.toggle('collapsed')">
+                    <button class="chat-toggle-btn">
                         <i class="fas fa-plug"></i>
                     </button>
                 </div>
             </div>
 
-            <div class="center-content-wrapper">
-                <div class="sub-panel left-center-panel">
-                    <div class="collection-header">
-                        <h2 id="collection-name-display">Select a Collection</h2>
-                        <input type="text" id="collection-name-input" class="collection-name-input" value="Select a Collection" style="display: none;">
-                        <div class="collection-meta">
-                            <span id="tag-meta-span"><i class="fas fa-tags"></i> No collection selected</span>
-                            <select id="collection-tag-select" style="display: none;"></select>
-                        </div>
-                    </div>
-                    <div class="collection-content-area">
-                        <p>Please select a collection from the left panel to view its content.</p>
+            <div class="integration-content">
+                <div class="integration-page">
+                    <div class="chat-messages">
+                        <div class="message incoming">Hello there.</div>
+                        <div class="message outgoing">Got it.</div>
                     </div>
                 </div>
-
-                <div class="sub-panel right-center-panel">
-                    <div class="chat-interface-container">
-                        <div class="chat-list-sidebar">
-                            <h3>Telegram Chats</h3>
-                            <ul class="chat-list">
-                                <li class="chat-item active">Work Group</li>
-                                <li class="chat-item">Friend Chat</li>
-                                <li class="chat-item">Tech News</li>
-                            </ul>
-                        </div>
-                        <div class="chat-content-view">
-                            <div class="chat-header">
-                                <h4>Work Group Chat</h4>
-                            </div>
-                            <div class="chat-messages">
-                                <div class="message incoming">Hello there.</div>
-                                <div class="message outgoing">Got it.</div>
-                            </div>
-                            <div class="chat-input">
-                                <input type="text" placeholder="Reply to chat...">
-                                <button><i class="fas fa-paper-plane"></i></button>
-                            </div>
-                        </div>
-                    </div>
+                
+                <div class="integration-sidebar">
+                    <ul class="chat-list">
+                        <li class="chat-item active">Work Group</li>
+                        <li class="chat-item">Friend Chat</li>
+                        <li class="chat-item">Tech News</li>
+                    </ul>
                 </div>
-
             </div>
 
+            <div class="integration-footer">
+                <input type="text" placeholder="Reply to chat...">
+                <button><i class="fas fa-paper-plane"></i></button>
+            </div>
         </div>
-        <div class="panel right-panel">
-            <div class="llm-chat-header">
+
+        <!-- LLM SECTION -->
+        <div class="llm-section">
+            <div class="llm-header">
                 <button class="action-button create-chat-btn">
                     <i class="fas fa-plus"></i> Создать чат
                 </button>
@@ -109,23 +108,17 @@
                 </button>
             </div>
 
-            <div class="llm-chat-messages">
+            <div class="llm-page">
                 <div class="llm-message user-msg">Select a collection to start chatting with context</div>
                 <div class="llm-message assistant-msg">I can help you summarize or answer questions about your collections. First, select a collection from the left panel.</div>
             </div>
 
-            <div class="llm-context-area" style="display: none;">
-                </div>
-
-            <div class="llm-chat-input">
+            <div class="llm-footer">
                 <input type="text" placeholder="Ask the LLM or add context...">
                 <button><i class="fas fa-paper-plane"></i></button>
             </div>
-
-            <div class="history-window">
-                </div>
         </div>
     </div>
-<script src="/ui/scripts/left_panel_controller.js"></script>
+<script src="/ui/script.mjs" type="module"></script>
 </body>
 </html>

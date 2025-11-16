@@ -1,0 +1,144 @@
+/* LLM SECTION */
+.llm-section {
+    width: 380px;
+    display: flex;
+    flex-direction: column;
+    background-color: #f9f5f0;
+    padding: 20px;
+}
+
+/* LLM Header */
+.llm-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 0 20px 0;
+    flex-shrink: 0;
+}
+
+.create-chat-btn {
+    width: auto;
+    padding: 8px 15px;
+    font-size: 0.85em;
+    border-radius: 4px;
+    margin-bottom: 0;
+    height: auto;
+    background-color: #d9b981;
+    color: white;
+    display: flex;
+    align-items: center;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.create-chat-btn i {
+    font-size: 0.8em;
+    margin-right: 8px;
+    margin-left: 0;
+}
+
+.history-btn {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    background-color: #d9b981;
+    color: white;
+    transition: background-color 0.2s ease;
+    border: none;
+    cursor: pointer;
+    margin-bottom: 0;
+}
+
+.history-btn i {
+    font-size: 0.9em;
+    margin: 0;
+}
+
+.create-chat-btn:hover, .history-btn:hover {
+    background-color: #c7a56a;
+}
+
+/* LLM Page */
+.llm-page {
+    flex-grow: 1;
+    overflow-y: auto;
+    margin-bottom: 15px;
+    scrollbar-width: auto;
+}
+
+.llm-page::-webkit-scrollbar { 
+    display: none; 
+}
+
+.llm-message {
+    padding: 12px 18px;
+    border-radius: 10px;
+    margin-bottom: 12px;
+    line-height: 1.6;
+    font-size: 0.95em;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.user-msg {
+    background-color: #f9f5e6;
+    margin-left: auto;
+    max-width: 80%;
+}
+
+.assistant-msg {
+    background-color: #ffffff;
+    border: 1px solid #e8e4db;
+    max-width: 90%;
+}
+
+/* LLM Footer */
+.llm-footer {
+    display: flex;
+    padding-top: 20px;
+    border-top: 1px solid #e8e4db;
+    flex-shrink: 0;
+    background-color: #f9f5f0;
+}
+
+.llm-footer input {
+    flex-grow: 1;
+    padding: 12px 18px;
+    border: 1px solid #d4d0c5;
+    border-radius: 4px;
+    margin-right: 10px;
+    font-size: 0.95em;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.llm-footer input:focus {
+    border-color: #d9b981;
+    box-shadow: 0 0 0 0.2rem rgba(217, 185, 129, 0.4);
+}
+
+.llm-footer button {
+    background-color: #d9b981;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    padding: 8px;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 1.1em;
+    flex-shrink: 0;
+    transition: background-color 0.2s ease;
+}
+
+.llm-footer button:hover {
+    background-color: #c7a56a;
+}
