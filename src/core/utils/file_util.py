@@ -18,7 +18,7 @@ class FileUtil:
         with open(file_path, "wb") as f:
             f.write(file.read())
 
-        return str(file_path)
+        return f"http://localhost:5500/var/files/{filename}{extension}"
 
     @staticmethod
     def get_file_text(file_path: str) -> str:

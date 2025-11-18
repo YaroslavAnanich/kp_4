@@ -334,63 +334,32 @@ body {
     align-items: center;
 }
 
-
-
-
-
-
-
-.collection-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    position: relative;
-    padding: 5px 10px;
-    cursor: pointer;
-    font-size: 0.9em;
-    color: #6c6258;
-    transition: background-color 0.2s ease, color 0.2s ease;
-    border-radius: 4px;
-    margin-bottom: 2px;
+/* Tag collections spacing */
+.tag-collections-container {
+    padding-left: 5px !important;
+    margin-top: 2px;
 }
 
-.collection-item:hover, .collection-item.active {
+.tag-collections {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.tag-collections .collection-item {
+    padding: 2px 5px;
+    margin-bottom: 1px;
+    border-radius: 2px;
+    font-size: 0.85em;
+}
+
+/* Active collection styles */
+.collection-item.active {
     background-color: #f1ede5;
     color: #4a413a;
+    font-weight: 500;
 }
 
-.collection-name-text {
-    flex-grow: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.delete-btn {
-    background: none;
-    border: none;
-    color: #cc6666;
-    cursor: pointer;
-    font-size: 0.7em;
-    padding: 2px 5px;
-    margin-left: 8px;
-    flex-shrink: 0;
-    opacity: 0;
-    transition: opacity 0.2s ease, color 0.2s ease;
-    border-radius: 3px;
-    width: 20px;
-    height: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.delete-btn:hover {
-    background-color: #ffebee;
-    color: #990000;
-    opacity: 1;
-}
-
-.collection-item:hover .delete-btn {
-    opacity: 0.7;
+.collection-item.active:hover {
+    background-color: #e8e4db;
 }

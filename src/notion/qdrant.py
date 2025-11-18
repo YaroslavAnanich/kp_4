@@ -64,7 +64,7 @@ class NotionQdrant:
 
     async def delete_block(self, collection_name: str, block_id: Union[str, int]) -> bool:
         """Удаляет блок по его ID."""
-        await self.client.delete_points(
+        await self.client.delete(
             collection_name=collection_name,
             points_selector=models.PointIdsList(points=[block_id]),
             wait=True
@@ -151,7 +151,7 @@ class NotionQdrant:
     def extract_text_content(block: AnyBlock) -> str:
         """Извлекает текст из блока для векторизации."""
         if isinstance(block, (TextBlock, HeaderBlock)):
-            return " ".join([span.text for span in block.content])
+            return block.content
 
         if isinstance(block, FileBlock):
             if block.media_type == MediaType.DOCUMENT:

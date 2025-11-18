@@ -1,5 +1,5 @@
 from enum import Enum
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from uuid import UUID
 
 from src.core.schemes import MediaType
@@ -21,28 +21,6 @@ class ListType(str, Enum):
     BULLET = "bullet"
     NUMBER = "number"
 
-# --- Styles ---
-
-class TextStyle(BaseModel):
-    """Стилизация для TextSpan."""
-    bold: bool = False
-    italic: bool = False
-    underline: bool = False
-    strikethrough: bool = False
-    color: str = "black"
-    backgroundColor: str | None = None
-
-
-
-
-
-# --- Text Content ---
-
-class TextSpan(BaseModel):
-    """Единица текста с примененным форматированием."""
-    text: str
-    style: TextStyle = Field(default_factory=TextStyle)
-
 
 # --- Base Block and Unions ---
 
@@ -59,13 +37,13 @@ class Block(BaseModel):
 class TextBlock(Block):
     """Блок обычного текста (параграф)."""
     type: BlockType = BlockType.TEXT
-    content: list[TextSpan]
+    content: str
 
 
 class HeaderBlock(Block):
     """Блок заголовка."""
     type: BlockType = BlockType.HEADER
-    content: list[TextSpan]
+    content: str
     level: int = 1  # уровень заголовка (1-6)
 
 

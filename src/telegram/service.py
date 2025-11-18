@@ -5,7 +5,7 @@ from telethon.tl.types import (Dialog, Message, User, MessageMediaPhoto, Message
                                MessageMediaWebPage)
 
 from src.core.utils.file_util import FileUtil
-from src.notion.schemes import AnyBlock, TextSpan, TextBlock, LinkBlock, FileBlock
+from src.notion.schemes import AnyBlock, TextBlock, LinkBlock, FileBlock
 from src.telegram.schemes import ChatSchema, MessageSchema, MediaType
 import base64
 
@@ -165,48 +165,48 @@ class TelegramService:
 
 
 
-    async def message_to_block(self, message: MessageSchema) -> AnyBlock:
-        """Преобразует MessageSchema в соответствующий блок контента."""
+    # async def message_to_block(self, message: MessageSchema) -> AnyBlock:
+    #     """Преобразует MessageSchema в соответствующий блок контента."""
 
-        # Если нет медиа - возвращаем текстовый блок
-        if message.media_type is None:
-            text_span = TextSpan(text=f'{message.sender_name} написал: {message.text}' or "")
-            return TextBlock(content=[text_span])
+    #     # Если нет медиа - возвращаем текстовый блок
+    #     if message.media_type is None:
+    #         text_span = TextSpan(text=f'{message.sender_name} написал: {message.text}' or "")
+    #         return TextBlock(content=[text_span])
 
-        # Если это ссылка - возвращаем LinkBlock
-        elif message.media_type == MediaType.LINK:
-            return LinkBlock(content=message.text or "")
+    #     # Если это ссылка - возвращаем LinkBlock
+    #     elif message.media_type == MediaType.LINK:
+    #         return LinkBlock(content=message.text or "")
 
-        # Для всех остальных типов медиа - FileBlock
-        else:
-            # Скачиваем файл из Telegram
-            file_bytes = await self._download_file_by_message_id(
-                chat_id=message.tg_chat_id,
-                message_id=message.id
-            )
+    #     # Для всех остальных типов медиа - FileBlock
+    #     else:
+    #         # Скачиваем файл из Telegram
+    #         file_bytes = await self._download_file_by_message_id(
+    #             chat_id=message.tg_chat_id,
+    #             message_id=message.id
+    #         )
 
-            if not file_bytes:
-                # Если не удалось скачать, возвращаем текстовый блок
-                text_span = TextSpan(text=f"[Ошибка загрузки: {message.file_name or 'unknown'}]")
-                return TextBlock(content=[text_span])
+    #         if not file_bytes:
+    #             # Если не удалось скачать, возвращаем текстовый блок
+    #             text_span = TextSpan(text=f"[Ошибка загрузки: {message.file_name or 'unknown'}]")
+    #             return TextBlock(content=[text_span])
 
-            # Сохраняем файл через FileUtil
+    #         # Сохраняем файл через FileUtil
 
 
 
-            # Создаем файловый объект из байтов
-            file_obj = BytesIO(file_bytes)
-            print("я дошел до этого момента")
-            print(file_obj)
-            # Сохраняем файл
-            server_name = self.file_util.save_file(file_obj)
-            print(server_name)
+    #         # Создаем файловый объект из байтов
+    #         file_obj = BytesIO(file_bytes)
+    #         print("я дошел до этого момента")
+    #         print(file_obj)
+    #         # Сохраняем файл
+    #         server_name = self.file_util.save_file(file_obj)
+    #         print(server_name)
 
-            return FileBlock(
-                file_name=message.file_name or "unknown_file",
-                file_path=server_name,
-                media_type=message.media_type
-            )
+    #         return FileBlock(
+    #             file_name=message.file_name or "unknown_file",
+    #             file_path=server_name,
+    #             media_type=message.media_type
+    #         )
 
     async def chat_to_blocks(self, chat_id: int, limit: int = 100) -> List[AnyBlock]:
         """Получить все сообщения из чата и преобразовать в блоки с нумерацией."""

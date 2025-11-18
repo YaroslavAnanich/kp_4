@@ -1,0 +1,222 @@
+/* Collection Viewer Styles */
+.content-block {
+    position: relative;
+    margin-bottom: 20px;
+    padding: 10px;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.content-block:hover {
+    background-color: #f9f9f9;
+}
+
+.block-controls {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.content-block:hover .block-controls {
+    opacity: 1;
+}
+
+.block-btn {
+    background: none;
+    border: none;
+    padding: 5px;
+    margin-left: 5px;
+    cursor: pointer;
+    color: #888;
+    border-radius: 3px;
+}
+
+.block-btn:hover {
+    background-color: #e8e4db;
+    color: #4a413a;
+}
+
+/* Editable Content Styles */
+[contenteditable="true"] {
+    outline: none;
+    padding: 5px;
+    border-radius: 3px;
+    transition: background-color 0.2s ease;
+}
+
+[contenteditable="true"]:focus {
+    background-color: #fff9e6;
+}
+
+.editable-header {
+    margin-bottom: 10px;
+}
+
+.editable-list {
+    margin: 10px 0;
+    padding-left: 20px;
+}
+
+.editable-list-item {
+    margin-bottom: 5px;
+}
+
+/* File Block Styles */
+.file-block {
+    margin: 15px 0;
+    padding: 10px;
+    border: 1px solid #e8e4db;
+    border-radius: 4px;
+}
+
+.photo-block img {
+    border-radius: 4px;
+    max-width: 100%;
+    height: auto;
+}
+
+.audio-block audio {
+    width: 100%;
+    margin-bottom: 5px;
+}
+
+.document-block .document-link {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    color: #4a413a;
+    padding: 10px;
+    border: 1px solid #e8e4db;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.document-block .document-link:hover {
+    background-color: #f5f0e8;
+}
+
+.document-block .fa-file {
+    margin-right: 10px;
+    font-size: 1.2em;
+    color: #d9b981;
+}
+
+/* Link Block Styles */
+.link-block {
+    margin: 10px 0;
+}
+
+.external-link {
+    color: #d9b981;
+    text-decoration: none;
+    padding: 8px 12px;
+    border: 1px solid #e8e4db;
+    border-radius: 4px;
+    display: inline-block;
+    transition: all 0.2s ease;
+}
+
+.external-link:hover {
+    background-color: #f5f0e8;
+    text-decoration: underline;
+}
+
+/* Table Styles */
+.editable-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0;
+}
+
+.editable-table td {
+    border: 1px solid #e8e4db;
+    padding: 8px;
+    min-width: 100px;
+}
+
+.editable-table td:focus {
+    background-color: #fff9e6;
+}
+
+/* Add Block Button */
+.add-new-block-btn {
+    width: 100%;
+    padding: 15px;
+    background-color: #fcfcf5;
+    border: 2px dashed #e8e4db;
+    border-radius: 4px;
+    color: #888;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-top: 20px;
+    font-family: 'Roboto', sans-serif;
+}
+
+.add-new-block-btn:hover {
+    background-color: #f5f0e8;
+    border-color: #d9b981;
+    color: #4a413a;
+}
+
+/* Block Type Modal */
+.block-type-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    min-width: 300px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    font-family: 'Roboto', sans-serif;
+}
+
+.block-type-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 20px 0;
+}
+
+.block-type-option {
+    padding: 10px;
+    border: 1px solid #e8e4db;
+    background: white;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.9em;
+}
+
+.block-type-option:hover {
+    background-color: #f5f0e8;
+    border-color: #d9b981;
+}
+
+.close-modal {
+    width: 100%;
+    padding: 10px;
+    background: #f5f0e8;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'Roboto', sans-serif;
+    transition: background-color 0.2s ease;
+}
+
+.close-modal:hover {
+    background-color: #e8e4db;
+}
