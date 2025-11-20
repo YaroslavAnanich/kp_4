@@ -4,7 +4,7 @@ from src.core.utils.file_util import FileUtil
 from src.llm.models import RequestResponseOrm, ChatOrm
 from src.llm.mysql import LlmMysql
 from src.llm.schemes import AddNotionContextScheme
-from src.notion.models import QdrantCollectionOrm
+from src.notion.models import CollectionOrm
 
 
 class LlmService:
@@ -32,7 +32,7 @@ class LlmService:
     def add_collection_context_to_chat(self, chat_id, notion_ids) -> list[int]:
         return self.mysql.add_chat_collections_by_qdrant_ids(chat_id=chat_id, qdrant_collection_ids=notion_ids)
 
-    def get_collection_context_from_chat(self, chat_id: int) -> list[QdrantCollectionOrm]:
+    def get_collection_context_from_chat(self, chat_id: int) -> list[CollectionOrm]:
         return self.mysql.get_qdrant_collections_by_chat_id(chat_id=chat_id)
 
     def search_in_llm(self, request: str, chat_id: int, qdrant_context: str) -> Dict:

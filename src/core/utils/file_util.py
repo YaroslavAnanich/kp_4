@@ -5,20 +5,20 @@ from unstructured.partition.auto import partition
 
 
 class FileUtil:
-    def __init__(self, storage_path: str = "/home/parus/Projects/KP/var/files/"):
+    def __init__(self, storage_path: str = "/home/parus/Projects/KP/var/"):
         self.storage_path = storage_path
         os.makedirs(self.storage_path, exist_ok=True)
 
     def save_file(self, file: BinaryIO, filename: Optional[str] = None) -> str:
         # Пытаемся получить расширение разными способами
-        _, extension = os.path.splitext(filename)
+        name, extension = os.path.splitext(filename)
         filename = uuid.uuid4()
         file_path = f"{self.storage_path}{filename}{extension}"
 
         with open(file_path, "wb") as f:
             f.write(file.read())
 
-        return f"http://localhost:5500/var/files/{filename}{extension}"
+        return name, f"http://127.0.0.1:8080/var/{filename}{extension}"
 
     @staticmethod
     def get_file_text(file_path: str) -> str:

@@ -1,7 +1,7 @@
 from sqlalchemy import select
 
 from src.llm.models import ChatOrm, RequestResponseOrm, ChatCollectionOrm
-from src.notion.models import QdrantCollectionOrm
+from src.notion.models import CollectionOrm
 
 
 class LlmMysql:
@@ -90,12 +90,12 @@ class LlmMysql:
 
             return qdrant_collection_ids
 
-    def get_qdrant_collections_by_chat_id(self, chat_id: int) -> list[QdrantCollectionOrm]:
+    def get_qdrant_collections_by_chat_id(self, chat_id: int) -> list[CollectionOrm]:
         with self.session_factory() as session:
             query = (
-                select(QdrantCollectionOrm)
-                .select_from(QdrantCollectionOrm)
-                .join(ChatCollectionOrm, QdrantCollectionOrm.id == ChatCollectionOrm.qdrant_collection_id)
+                select(CollectionOrm)
+                .select_from(CollectionOrm)
+                .join(ChatCollectionOrm, CollectionOrm.id == ChatCollectionOrm.qdrant_collection_id)
                 .where(ChatCollectionOrm.chat_id == chat_id)
             )
             result = session.execute(query)

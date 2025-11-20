@@ -28,9 +28,6 @@ class Block(BaseModel):
     """Базовый класс для всех блоков."""
     id: str = None
     type: BlockType
-    order: int | None = None # если None, то вложен в какой-то другой блок
-
-
 
 # --- Concrete Blocks ---
 
@@ -50,7 +47,7 @@ class HeaderBlock(Block):
 class TableBlock(Block):
     """Блок таблицы."""
     type: BlockType = BlockType.TABLE
-    content: list[list[UUID | dict]]
+    content: list[list[str]]
     row_count: int = 3
     column_count: int = 3
 
@@ -61,14 +58,14 @@ class FileBlock(Block):
     type: BlockType = BlockType.FILE
     media_type: MediaType
     file_name:  str | None = None
-    file_path: str | None = None #При добавлении блока всегда None
+    file_path: str
 
 
 class ListBlock(Block):
     """Блок маркированного списка."""
     type: BlockType = BlockType.LIST
     list_type: ListType
-    content: list[UUID | dict]
+    content: str = ""
 
 
 class LinkBlock(Block):

@@ -6,13 +6,12 @@ from qdrant_client import AsyncQdrantClient, models
 from qdrant_client.http.models import Distance, VectorParams, PointStruct
 from sentence_transformers import SentenceTransformer
 
-
 from src.notion.schemes import AnyBlock, BlockType, TextBlock, HeaderBlock, TableBlock, FileBlock, ListBlock, LinkBlock
 from src.core.utils.file_util import FileUtil
 from src.core.schemes import MediaType
 
 # Настройки векторизации и Qdrant
-EMBEDDING_MODEL_NAME = "all-MiniLM-L6-v2"
+EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"  # Полный путь
 EMBEDDING_VECTOR_SIZE = 384
 QDRANT_HOST = "localhost"
 QDRANT_PORT = 6333
@@ -22,10 +21,17 @@ class NotionQdrant:
     """Класс для работы с векторной базой данных Qdrant"""
 
     def __init__(self, host: str = QDRANT_HOST, port: int = QDRANT_PORT):
-        self.client = AsyncQdrantClient(host=host, port=port)
-        self.model = SentenceTransformer(EMBEDDING_MODEL_NAME)
+        self.client = AsyncQdrantClient(
+            host=host, 
+            port=port,
+            check_compatibility=False
+        )
+        
+        # Загружаем надежную модель
+        self.model = SentenceTransformer(EMBEDDING_MODEL_NAME, device='cpu')
         print(f"Используется модель для векторизации: {EMBEDDING_MODEL_NAME}")
 
+    # Все остальные методы остаются без изменений...
     async def create_collection(self) -> str:
         """Создает новую коллекцию (заметку)."""
         collection_name = str(uuid.uuid4())
@@ -46,10 +52,11 @@ class NotionQdrant:
         text_to_embed = self.extract_text_content(block)
         vector = await asyncio.to_thread(self.model.encode, text_to_embed)
         vector = vector.tolist()
-        block.id = str(uuid.uuid4())
+        if block.id == None:
+            block.id = str(uuid.uuid4())
         payload = self._pydantic_to_payload(block)
 
-        await self.client.upsert(
+        q_block =await self.client.upsert(
             collection_name=collection_name,
             points=[
                 PointStruct(
@@ -60,6 +67,8 @@ class NotionQdrant:
             ],
             wait=True,
         )
+        
+        print(q_block)
         return block
 
     async def delete_block(self, collection_name: str, block_id: Union[str, int]) -> bool:
@@ -71,25 +80,7 @@ class NotionQdrant:
         )
         return True
 
-    async def update_block(self, collection_name: str, block: AnyBlock) -> AnyBlock:
-        """Обновляет блок в коллекции."""
-        text_to_embed = self.extract_text_content(block)
-        vector = await asyncio.to_thread(self.model.encode, text_to_embed)
-        vector = vector.tolist()
-        payload = self._pydantic_to_payload(block)
 
-        await self.client.upsert(
-            collection_name=collection_name,
-            points=[
-                PointStruct(
-                    id=block.id,
-                    vector=vector,
-                    payload=payload,
-                )
-            ],
-            wait=True,
-        )
-        return block
 
     async def get_collection_blocks(self, collection_name: str) -> List[Dict[str, Any]]:
         """Получает все блоки из коллекции в виде сырых данных."""
@@ -100,7 +91,6 @@ class NotionQdrant:
             with_vectors=False
         )
 
-        # Преобразуем точки в словари для единообразия
         points_data = []
         for point in scroll_result[0] or []:
             point_dict = {

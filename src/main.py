@@ -7,7 +7,6 @@ from src.core.database import Base, engine
 
 app = FastAPI()
 
-app.mount("/var", StaticFiles(directory="var"), name="var")
 
 app.include_router(main_router)
 

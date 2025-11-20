@@ -1,454 +1,979 @@
+// CollectionViewer.js
+// ИСПРАВЛЕНО: Предотвращена полная перезагрузка страницы после добавления файлового блока путем
+// использования контролируемой перерисовки (renderBlocks) вместо хирургической замены.
+
 export class CollectionViewer {
-    constructor() {
-        this.currentCollection = null;
-        this.currentCollectionId = null;
-        this.collectionNameDisplay = document.getElementById('collection-name-display');
-        this.collectionNameInput = document.getElementById('collection-name-input');
-        this.tagMetaSpan = document.getElementById('tag-meta-span');
-        this.collectionTagSelect = document.getElementById('collection-tag-select');
-        this.notionPage = document.querySelector('.notion-page');
-        this.init();
+    // STATE
+    currentCollectionId = null;
+    currentCollectionName = '';
+    currentTagId = null;
+    allTags = [];
+    contentMap = {};
+    orderList = [];
+    pickerBlockId = null; // ID блока, для которого открыт селектор
+
+    // DOM ELEMENTS
+    nameDisplay = document.getElementById('collection-name-display');
+    nameInput = document.getElementById('collection-name-input');
+    tagMetaSpan = document.getElementById('tag-meta-span');
+    tagSelect = document.getElementById('collection-tag-select');
+    notionPage = document.querySelector('.notion-page');
+    blockPickerEl = this._createBlockPickerElement(); // Новый элемент селектора
+
+    constructor(apiBaseUrl, explorer) {
+        this.API_BASE_URL = apiBaseUrl;
+        this.explorer = explorer;
+        this.initEventListeners();
+        this.notionPage.innerHTML = '<p>Please select a collection from the left panel to view its content.</p>';
     }
 
-    init() {
-        this.bindEvents();
+    setAllTags(tags) {
+        this.allTags = tags;
+        this._populateTagSelect(this.currentTagId);
     }
 
-    bindEvents() {
-        // Переключение между отображением и редактированием названия
-        this.collectionNameDisplay.addEventListener('click', () => {
-            this.startEditingName();
+    initEventListeners() {
+        // 1. Обработчики для имени коллекции
+        this.nameDisplay.addEventListener('click', () => this._startRename());
+        this.nameInput.addEventListener('blur', () => this._finishRename());
+        this.nameInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') this._finishRename();
         });
 
-        this.collectionNameInput.addEventListener('blur', () => {
-            this.finishEditingName();
-        });
+        // 2. Обработчик для смены тега
+        this.tagSelect.addEventListener('change', () => this._handleTagChange());
 
-        this.collectionNameInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                this.finishEditingName();
-            }
-        });
-
-        // Обработка выбора тега для коллекции
-        this.collectionTagSelect.addEventListener('change', (e) => {
-            this.updateCollectionTag(e.target.value);
-        });
-    }
-
-    async showCollection(collection) {
-        this.currentCollection = collection;
-        this.currentCollectionId = collection.qdrant_id;
+        // 3. Делегированные обработчики для блоков в notion-page
+        this.notionPage.addEventListener('focus', (e) => this._handleInputFocus(e), true);
+        this.notionPage.addEventListener('blur', (e) => this._handleInputBlur(e), true);
+        this.notionPage.addEventListener('keydown', (e) => this._handleKeyDown(e));
+        this.notionPage.addEventListener('input', (e) => this._handleInput(e));
         
-        // Обновляем заголовок
-        this.collectionNameDisplay.textContent = collection.name;
-        this.collectionNameInput.value = collection.name;
-        
-        // Обновляем мета-информацию
-        this.updateMetaInfo(collection);
-        
-        // Загружаем содержимое коллекции
-        await this.loadCollectionContent();
+        // 4. Глобальные обработчики для селектора блоков
+        document.addEventListener('click', (e) => this._handleGlobalClick(e));
+        this.notionPage.addEventListener('scroll', () => this._hideBlockTypePicker());
     }
+    
+    // --- НОВАЯ ФУНКЦИОНАЛЬНОСТЬ ДЛЯ СЕЛЕКТОРА БЛОКОВ ---
 
-    updateMetaInfo(collection) {
-        if (collection.tag_id) {
-            this.tagMetaSpan.innerHTML = `<i class="fas fa-tags"></i> Tag: ${collection.tag_name || 'Loading...'}`;
-            this.collectionTagSelect.style.display = 'inline-block';
-            this.loadAvailableTags();
-        } else {
-            this.tagMetaSpan.innerHTML = `<i class="fas fa-tags"></i> No tag`;
-            this.collectionTagSelect.style.display = 'inline-block';
-            this.loadAvailableTags();
-        }
-    }
+    _createBlockPickerElement() {
+        const picker = document.createElement('div');
+        // Используем inline стили, так как CSS-файл не может быть изменен напрямую.
+        picker.style.cssText = `
+            position: fixed; 
+            z-index: 200; 
+            background: white; 
+            border: 1px solid #e8e4db; 
+            border-radius: 4px; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
+            padding: 5px 0; 
+            display: none; 
+            min-width: 150px;
+            font-family: 'Roboto', sans-serif;
+        `;
+        
+        const options = [
+            { type: 'text', name: 'Text', icon: 'fas fa-paragraph' },
+            { type: 'header 1', name: 'Heading 1', icon: 'fas fa-heading' },
+            { type: 'list bullet', name: 'Bullet List', icon: 'fas fa-list-ul' },
+            { type: 'list number', name: 'Numbered List', icon: 'fas fa-list-ol' },
+            { type: 'link', name: 'Link', icon: 'fas fa-link' },
+            { type: 'file', name: 'File', icon: 'fas fa-file' }
+        ];
 
-    async loadAvailableTags() {
-        try {
-            const response = await fetch(`http://localhost:8000/tags?user_id=1`);
-            const tags = await response.json();
+        options.forEach(option => {
+            const btn = document.createElement('button');
+            btn.className = 'picker-option';
+            btn.style.cssText = `
+                display: block; 
+                width: 100%; 
+                text-align: left; 
+                padding: 7px 10px; 
+                border: none; 
+                background: none; 
+                cursor: pointer; 
+                font-size: 0.9em; 
+                color: #4a413a;
+            `;
+            btn.innerHTML = `<i class="${option.icon}" style="margin-right: 8px; width: 15px;"></i> ${option.name}`;
+            btn.setAttribute('data-type', option.type);
+            btn.addEventListener('click', (e) => this._handlePickerSelect(e));
             
-            this.collectionTagSelect.innerHTML = '<option value="">No tag</option>';
-            tags.forEach(tag => {
-                const option = document.createElement('option');
-                option.value = tag.id;
-                option.textContent = tag.name;
-                option.selected = tag.id === this.currentCollection.tag_id;
-                this.collectionTagSelect.appendChild(option);
-            });
-        } catch (error) {
-            console.error('Error loading tags:', error);
+            btn.addEventListener('mouseenter', () => btn.style.backgroundColor = '#f0f0f0');
+            btn.addEventListener('mouseleave', () => btn.style.backgroundColor = 'white');
+            
+            picker.appendChild(btn);
+        });
+        
+        document.body.appendChild(picker);
+        return picker;
+    }
+
+    _showBlockTypePicker(blockId, currentContent, editableEl) {
+        this._hideBlockTypePicker(); 
+        this.pickerBlockId = blockId;
+
+        // Позиционируем селектор
+        const rect = editableEl.getBoundingClientRect();
+        
+        // Устанавливаем положение, немного ниже и левее
+        this.blockPickerEl.style.top = `${rect.top + rect.height + 5}px`;
+        this.blockPickerEl.style.left = `${rect.left}px`;
+        this.blockPickerEl.style.display = 'block';
+        
+        // Очищаем содержимое блока от слеша немедленно
+        editableEl.textContent = currentContent.replace('/', '').trim();
+    }
+    
+    _hideBlockTypePicker() {
+        if (this.blockPickerEl) {
+            this.blockPickerEl.style.display = 'none';
+            this.pickerBlockId = null;
+        }
+    }
+    
+    _handlePickerSelect(e) {
+        e.stopPropagation();
+        const type = e.currentTarget.getAttribute('data-type');
+        const blockId = this.pickerBlockId;
+        
+        this._hideBlockTypePicker();
+        
+        // Получаем контент из блока, чтобы передать его в _replaceBlock
+        const editableEl = this.notionPage.querySelector(`[data-block-id="${blockId}"] .notion-block-editable`);
+        const currentContent = editableEl ? editableEl.textContent.trim() : '';
+        
+        if (blockId && type) {
+            if (type === 'file') {
+                // Если выбран файл, вызываем обработчик, который СРАЗУ открывает диалог
+                this._handleFileUploadReplace(blockId);
+            } else {
+                this._replaceBlock(blockId, type, currentContent);
+            }
+        }
+    }
+    
+    _handleGlobalClick(e) {
+        if (this.blockPickerEl && this.blockPickerEl.style.display !== 'none') {
+            const isClickInsidePicker = this.blockPickerEl.contains(e.target);
+            
+            // Скрываем селектор, если клик был вне его
+            if (!isClickInsidePicker) {
+                 this._hideBlockTypePicker();
+            }
         }
     }
 
-    async loadCollectionContent() {
+    // --- КОНЕЦ НОВОЙ ФУНКЦИОНАЛЬНОСТИ ---
+
+
+    selectCollection(collection) {
+        this.currentCollectionId = collection.id;
+        this.currentCollectionName = collection.name;
+        this.currentTagId = collection.tag_id;
+        
+        this.nameDisplay.textContent = collection.name;
+        this.nameInput.value = collection.name;
+        
+        this.nameDisplay.style.display = 'block';
+        this.nameInput.style.display = 'none';
+
+        this._renderTagMetadata();
+        this._populateTagSelect(collection.tag_id);
+
+        this.loadContent();
+    }
+
+    async loadContent() {
+        if (!this.currentCollectionId) return;
+
         try {
-            const response = await fetch(`http://localhost:8000/collections/${this.currentCollectionId}`);
+            const response = await fetch(`${this.API_BASE_URL}/collections/${this.currentCollectionId}`);
+            if (!response.ok) throw new Error('Failed to fetch collection content');
             const data = await response.json();
-            this.renderCollectionContent(data.collection);
+
+            this.contentMap = data.content.reduce((map, block) => {
+                map[block.id] = block;
+                return map;
+            }, {});
+            this.orderList = data.order_list;
+            
+            if (this.orderList.length === 0) {
+                await this._createEmptyTextBlock(0); 
+            } else {
+                this.renderBlocks();
+            }
+
         } catch (error) {
             console.error('Error loading collection content:', error);
-            this.notionPage.innerHTML = '<p>Error loading collection content</p>';
+            this.notionPage.innerHTML = `<p style="color: red;">Ошибка загрузки контента: ${error.message}</p>`;
         }
     }
 
-    renderCollectionContent(blocks) {
+    renderBlocks() {
         this.notionPage.innerHTML = '';
-        
-        // Сортируем блоки по порядку
-        const sortedBlocks = blocks.sort((a, b) => (a.order || 0) - (b.order || 0));
-        
-        sortedBlocks.forEach(block => {
-            const blockElement = this.createBlockElement(block);
-            this.notionPage.appendChild(blockElement);
+        const fragment = document.createDocumentFragment();
+
+        this.orderList.forEach(blockId => {
+            const block = this.contentMap[blockId];
+            if (block) {
+                fragment.appendChild(this._createBlockWrapper(block));
+            }
         });
 
-        // Добавляем кнопку для добавления нового блока
-        this.addNewBlockButton();
+        this.notionPage.appendChild(fragment);
     }
 
-    createBlockElement(block) {
-        const blockDiv = document.createElement('div');
-        blockDiv.className = 'content-block';
-        blockDiv.dataset.blockId = block.id;
-        blockDiv.dataset.blockType = block.type;
+    _createBlockWrapper(block) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'block-wrapper';
+        wrapper.setAttribute('data-block-id', block.id);
+        wrapper.setAttribute('data-block-type', block.type);
+        
+        const contentElement = this._renderBlockContent(block);
+        
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'delete-block-btn';
+        deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+        deleteBtn.title = 'Удалить блок';
+        deleteBtn.addEventListener('click', () => this._handleDeleteBlock(block.id));
+        wrapper.prepend(deleteBtn);
+        
+        wrapper.appendChild(contentElement);
+        return wrapper;
+    }
 
-        let contentHTML = '';
-
+    _renderBlockContent(block) {
+        let el;
+        const content = block.content || ''; 
+        
         switch (block.type) {
-            case 'header':
-                contentHTML = this.createHeaderBlock(block);
-                break;
             case 'text':
-                contentHTML = this.createTextBlock(block);
+                el = document.createElement('p');
+                el.textContent = content; 
+                el.contentEditable = 'true';
+                el.classList.add('notion-block-editable');
+                break;
+            case 'header':
+                el = document.createElement(`h${block.level}`);
+                el.textContent = content;
+                el.contentEditable = 'true';
+                el.classList.add('notion-block-editable');
                 break;
             case 'list':
-                contentHTML = this.createListBlock(block);
-                break;
-            case 'file':
-                contentHTML = this.createFileBlock(block);
+                el = document.createElement('li');
+                el.textContent = content; 
+                el.setAttribute('data-list-type', block.list_type);
+                el.contentEditable = 'true';
+                el.classList.add('notion-block-editable');
                 break;
             case 'link':
-                contentHTML = this.createLinkBlock(block);
+                el = document.createElement('a');
+                el.href = content;
+                // FIX: Используем link_text, если он есть, иначе content
+                el.textContent = block.link_text || content; 
+                el.target = '_blank';
+                el.contentEditable = 'true'; // Делаем ссылку редактируемой для консистентности
+                el.classList.add('notion-block-editable');
+                break;
+            case 'file':
+                el = this._renderFileBlock(block);
+                el.contentEditable = 'false'; 
                 break;
             case 'table':
-                contentHTML = this.createTableBlock(block);
+                el = this._renderTableBlock(block);
+                el.contentEditable = 'false'; 
+                break;
+            default:
+                el = document.createElement('div');
+                el.textContent = content || '';
+                el.contentEditable = 'true';
+                el.classList.add('notion-block-editable');
                 break;
         }
-
-        blockDiv.innerHTML = contentHTML;
         
-        // Добавляем кнопки управления блоком
-        this.addBlockControls(blockDiv, block);
-        
-        return blockDiv;
+        return el;
     }
 
-    createHeaderBlock(block) {
-        return `<h${block.level} class="editable-header" contenteditable="true">${block.content}</h${block.level}>`;
-    }
-
-    createTextBlock(block) {
-        return `<p class="editable-text" contenteditable="true">${block.content}</p>`;
-    }
-
-    createListBlock(block) {
-        let listHTML = `<${block.list_type === 'number' ? 'ol' : 'ul'} class="editable-list">`;
+    _renderTableBlock(block) {
+        const table = document.createElement('table');
+        table.className = 'notion-table';
+        const tbody = document.createElement('tbody');
         
-        if (Array.isArray(block.content)) {
-            block.content.forEach(item => {
-                if (typeof item === 'object' && item.type === 'text') {
-                    listHTML += `<li class="editable-list-item" contenteditable="true" data-item-id="${item.id}">${item.content}</li>`;
-                } else if (typeof item === 'string') {
-                    listHTML += `<li class="editable-list-item" contenteditable="true" data-item-id="${item}">Item</li>`;
-                }
+        block.content.forEach((row, rowIndex) => {
+            const tr = document.createElement('tr');
+            row.forEach((cell, cellIndex) => {
+                const cellEl = rowIndex === 0 ? document.createElement('th') : document.createElement('td');
+                cellEl.textContent = cell;
+                cellEl.contentEditable = 'true'; 
+                cellEl.setAttribute('data-row-index', rowIndex);
+                cellEl.setAttribute('data-cell-index', cellIndex);
+                cellEl.classList.add('notion-block-editable'); 
+                tr.appendChild(cellEl);
             });
-        }
-        
-        listHTML += `</${block.list_type === 'number' ? 'ol' : 'ul'}>`;
-        return listHTML;
+            tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+        return table;
     }
 
-    createFileBlock(block) {
+    _renderFileBlock(block) {
+        const fileWrapper = document.createElement('div');
+        fileWrapper.className = 'file-block-content';
+        
         switch (block.media_type) {
             case 'photo':
-                return `<div class="file-block photo-block">
-                    <img src="${block.file_path}" alt="${block.file_name}" style="max-width: 100%; height: auto;">
-                    <div class="file-name" contenteditable="true">${block.file_name}</div>
-                </div>`;
-            
-            case 'audio':
-                return `<div class="file-block audio-block">
-                    <audio controls>
-                        <source src="${block.file_path}" type="audio/mpeg">
-                        Your browser does not support the audio element.
-                    </audio>
-                    <div class="file-name" contenteditable="true">${block.file_name}</div>
-                </div>`;
-            
-            case 'document':
-                return `<div class="file-block document-block">
-                    <a href="${block.file_path}" target="_blank" class="document-link">
-                        <i class="fas fa-file"></i>
-                        <span class="file-name" contenteditable="true">${block.file_name}</span>
-                    </a>
-                </div>`;
-        }
-    }
-
-    createLinkBlock(block) {
-        return `<div class="link-block">
-            <a href="${block.content}" target="_blank" class="external-link" contenteditable="true">${block.content}</a>
-        </div>`;
-    }
-
-    createTableBlock(block) {
-        let tableHTML = '<table class="editable-table"><tbody>';
-        
-        if (Array.isArray(block.content)) {
-            block.content.forEach((row, rowIndex) => {
-                tableHTML += '<tr>';
-                if (Array.isArray(row)) {
-                    row.forEach((cell, cellIndex) => {
-                        tableHTML += `<td class="editable-table-cell" contenteditable="true" data-row="${rowIndex}" data-col="${cellIndex}">${cell.content || ''}</td>`;
-                    });
-                }
-                tableHTML += '</tr>';
-            });
-        }
-        
-        tableHTML += '</tbody></table>';
-        return tableHTML;
-    }
-
-    addBlockControls(blockDiv, block) {
-        const controlsDiv = document.createElement('div');
-        controlsDiv.className = 'block-controls';
-        
-        controlsDiv.innerHTML = `
-            <button class="block-btn add-block-btn" title="Add block below">
-                <i class="fas fa-plus"></i>
-            </button>
-            <button class="block-btn delete-block-btn" title="Delete block">
-                <i class="fas fa-times"></i>
-            </button>
-        `;
-
-        blockDiv.appendChild(controlsDiv);
-
-        // Обработчики для кнопок управления
-        const addBtn = controlsDiv.querySelector('.add-block-btn');
-        const deleteBtn = controlsDiv.querySelector('.delete-block-btn');
-
-        addBtn.addEventListener('click', () => {
-            this.showAddBlockModal(block.order + 1);
-        });
-
-        deleteBtn.addEventListener('click', () => {
-            this.deleteBlock(block.id);
-        });
-    }
-
-    addNewBlockButton() {
-        const addButton = document.createElement('button');
-        addButton.className = 'add-new-block-btn';
-        addButton.innerHTML = '<i class="fas fa-plus"></i> Add Block';
-        addButton.addEventListener('click', () => {
-            this.showAddBlockModal();
-        });
-        this.notionPage.appendChild(addButton);
-    }
-
-    showAddBlockModal(afterOrder = null) {
-        // Создаем модальное окно для выбора типа блока
-        const modal = document.createElement('div');
-        modal.className = 'block-type-modal';
-        modal.innerHTML = `
-            <div class="modal-content">
-                <h3>Add New Block</h3>
-                <div class="block-type-options">
-                    <button class="block-type-option" data-type="text">Text</button>
-                    <button class="block-type-option" data-type="header">Header</button>
-                    <button class="block-type-option" data-type="list">List</button>
-                    <button class="block-type-option" data-type="file">File</button>
-                    <button class="block-type-option" data-type="link">Link</button>
-                    <button class="block-type-option" data-type="table">Table</button>
-                </div>
-                <button class="close-modal">Cancel</button>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-
-        // Обработчики для выбора типа блока
-        const options = modal.querySelectorAll('.block-type-option');
-        options.forEach(option => {
-            option.addEventListener('click', (e) => {
-                const blockType = e.target.dataset.type;
-                this.createNewBlock(blockType, afterOrder);
-                modal.remove();
-            });
-        });
-
-        // Закрытие модального окна
-        const closeBtn = modal.querySelector('.close-modal');
-        closeBtn.addEventListener('click', () => {
-            modal.remove();
-        });
-
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                modal.remove();
-            }
-        });
-    }
-
-    async createNewBlock(blockType, afterOrder = null) {
-        const baseBlock = {
-            type: blockType,
-            order: afterOrder || this.getNextOrder()
-        };
-
-        let newBlock = {};
-
-        switch (blockType) {
-            case 'header':
-                newBlock = { ...baseBlock, content: 'New Header', level: 1 };
+                const img = document.createElement('img');
+                img.src = block.file_path;
+                img.alt = block.file_name || 'Image';
+                fileWrapper.appendChild(img);
                 break;
+            case 'audio':
+                const audio = document.createElement('audio');
+                audio.controls = true;
+                audio.src = block.file_path;
+                fileWrapper.appendChild(audio);
+                break;
+            case 'document':
+                const link = document.createElement('a');
+                link.href = block.file_path;
+                link.target = '_blank';
+                link.textContent = `[Документ] ${block.file_name || 'Открыть файл'}`;
+                fileWrapper.appendChild(link);
+                break;
+            default:
+                const text = document.createElement('p');
+                text.textContent = `[Файл] ${block.file_name || block.file_path}`;
+                fileWrapper.appendChild(text);
+                break;
+        }
+        return fileWrapper;
+    }
+
+    _getBlockDataFromEvent(e) {
+        const editableEl = e.target.closest('.notion-block-editable');
+        if (!editableEl) return null;
+
+        const wrapper = editableEl.closest('.block-wrapper');
+        const blockId = wrapper.getAttribute('data-block-id');
+        const blockType = wrapper.getAttribute('data-block-type');
+        
+        return { editableEl, wrapper, blockId, blockType };
+    }
+
+    _handleInputFocus(e) {
+        const data = this._getBlockDataFromEvent(e);
+        if (!data) return;
+
+        const isTextOrList = data.blockType === 'text' || data.blockType === 'list';
+        const isEmpty = data.editableEl.textContent.trim() === '';
+
+        if (isTextOrList && isEmpty) {
+            data.editableEl.textContent = 'нажмите / чтобы добавить блок';
+            data.editableEl.classList.add('empty-placeholder');
+            
+            const range = document.createRange();
+            const sel = window.getSelection();
+            if (data.editableEl.firstChild) {
+                range.setStart(data.editableEl.firstChild, 0);
+            } else {
+                 range.setStart(data.editableEl, 0);
+            }
+            range.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(range);
+        }
+    }
+    
+    _handleInput(e) {
+        const data = this._getBlockDataFromEvent(e);
+        if (!data) return;
+
+        const placeholderText = 'нажмите / чтобы добавить блок';
+        const editableEl = data.editableEl;
+        
+        if (editableEl.classList.contains('empty-placeholder')) {
+            editableEl.classList.remove('empty-placeholder');
+            
+            let currentText = editableEl.textContent;
+            let newText = currentText;
+
+            if (currentText.includes(placeholderText)) {
+                newText = currentText.replace(placeholderText, '');
+                editableEl.textContent = newText;
+                
+                const range = document.createRange();
+                const sel = window.getSelection();
+                range.selectNodeContents(editableEl);
+                range.collapse(false); 
+                sel.removeAllRanges();
+                sel.addRange(range);
+            }
+            
+            this._saveBlockContent(data.blockId, newText.trim());
+        }
+    }
+    
+    _handleInputBlur(e) {
+        const data = this._getBlockDataFromEvent(e);
+        if (!data) return;
+
+        const block = this.contentMap[data.blockId];
+
+        // --- TABLE EDITING ---
+        if (data.blockType === 'table') {
+            const cellEl = e.target.closest('td, th');
+            if (!cellEl) return;
+
+            const newContent = cellEl.textContent;
+            const rowIndex = parseInt(cellEl.getAttribute('data-row-index'));
+            const cellIndex = parseInt(cellEl.getAttribute('data-cell-index'));
+            
+            if (block.content[rowIndex][cellIndex] === newContent) return;
+
+            const newTableContent = block.content.map((row, rIdx) => {
+                if (rIdx === rowIndex) {
+                    const newRow = [...row];
+                    newRow[cellIndex] = newContent;
+                    return newRow;
+                }
+                return row;
+            });
+
+            this._saveBlockContent(data.blockId, newTableContent);
+            return;
+        }
+
+        // --- LINK EDITING ---
+        if (data.blockType === 'link') {
+             const currentText = data.editableEl.textContent.trim();
+             // В этом случае сохраняем изменения как link_text, а не content (URL)
+             // Если ссылка была пустой, сохраняем как content
+             this._saveBlockContent(data.blockId, currentText); 
+             return;
+        }
+
+        // --- TEXT/HEADER/LIST EDITING ---
+        
+        const currentContent = data.editableEl.textContent; 
+        
+        const contentToSave = (data.editableEl.classList.contains('empty-placeholder')) 
+            ? '' 
+            : currentContent.trim();
+        
+        this._saveBlockContent(data.blockId, contentToSave);
+        
+        data.editableEl.classList.remove('empty-placeholder');
+        
+        if (contentToSave === '') {
+            data.editableEl.textContent = '';
+        }
+    }
+    
+    // ФИНАЛЬНОЕ ИСПРАВЛЕНИЕ: Более надежная проверка положения каретки
+    async _handleKeyDown(e) {
+        const data = this._getBlockDataFromEvent(e);
+        if (!data) return;
+        
+        const { editableEl, blockId, blockType } = data;
+        const currentContent = editableEl.textContent; 
+        const contentToUse = (editableEl.classList.contains('empty-placeholder')) ? '' : currentContent;
+        const currentIndex = this.orderList.indexOf(blockId);
+        
+        if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+            
+            const sel = window.getSelection();
+            
+            // Получаем точную позицию каретки относительно всего содержимого блока
+            let isAtStart = false;
+            let isAtEnd = false;
+
+            if (sel.rangeCount > 0) {
+                const range = sel.getRangeAt(0);
+                
+                // Проверка начала: начало диапазона совпадает с началом элемента
+                isAtStart = range.startOffset === 0 && range.startContainer === editableEl.firstChild;
+                
+                // Проверка конца: конец диапазона совпадает с концом элемента
+                if (editableEl.lastChild) {
+                    isAtEnd = range.endOffset === editableEl.lastChild.textContent.length && range.endContainer === editableEl.lastChild;
+                } else {
+                    isAtEnd = range.endOffset === editableEl.textContent.length && range.endContainer === editableEl;
+                }
+                
+                // Дополнительная проверка: если блок пуст, оба условия ложны, но при этом мы хотим перемещаться
+                if (editableEl.textContent.trim() === '' || editableEl.classList.contains('empty-placeholder')) {
+                    isAtStart = true; 
+                    isAtEnd = true; 
+                }
+            }
+
+
+            if (blockType !== 'table') {
+                
+                // УСЛОВИЕ ДЛЯ ПЕРЕМЕЩЕНИЯ ВВЕРХ
+                if (e.key === 'ArrowUp' && isAtStart) {
+                    e.preventDefault(); 
+                    const newIndex = currentIndex - 1;
+                    const newBlockId = this.orderList[newIndex];
+                    if (newBlockId) this._focusBlock(newBlockId, 'end'); 
+                } 
+                
+                // УСЛОВИЕ ДЛЯ ПЕРЕМЕЩЕНИЯ ВНИЗ
+                else if (e.key === 'ArrowDown' && isAtEnd) {
+                    e.preventDefault(); // КЛЮЧЕВОЕ: Блокируем стандартное действие браузера
+                    const newIndex = currentIndex + 1;
+                    const newBlockId = this.orderList[newIndex];
+                    if (newBlockId) this._focusBlock(newBlockId, 'start'); 
+                }
+            }
+        } else if (e.key === '/') {
+            e.preventDefault(); 
+            if (blockType === 'table') return;
+            
+            // --- ЗАМЕНА prompt() НА КАСТОМНЫЙ СЕЛЕКТОР ---
+            this._showBlockTypePicker(blockId, contentToUse, editableEl);
+            // ----------------------------------------------
+            
+        } else if (e.key === 'Enter') {
+            e.preventDefault(); 
+            if (blockType === 'table') return;
+            
+            await this._saveBlockContent(blockId, contentToUse.trim()); 
+            
+            editableEl.classList.remove('empty-placeholder');
+
+            let newBlockType = 'text';
+            let newBlockListType = 'bullet';
+
+            if (blockType === 'list') {
+                const isPlaceholder = contentToUse.trim() === '';
+                if (!isPlaceholder) {
+                    newBlockType = 'list';
+                    newBlockListType = this.contentMap[blockId].list_type;
+                }
+            }
+
+            await this._createEmptyTextBlock(currentIndex + 1, newBlockType, newBlockListType);
+
+        } else if (e.key === 'Backspace' && contentToUse.trim() === '' && this.orderList.length > 1) {
+            e.preventDefault();
+            this._handleDeleteBlock(blockId, true);
+        }
+    }
+    
+    // Вспомогательная функция для установки фокуса
+    _focusBlock(blockId, position) {
+        const newBlockWrapper = this.notionPage.querySelector(`[data-block-id="${blockId}"]`);
+        if (!newBlockWrapper) return;
+        
+        const newEditableEl = newBlockWrapper.querySelector('.notion-block-editable, td, th'); 
+
+        if (newEditableEl) {
+            newEditableEl.focus();
+            
+            const range = document.createRange();
+            const sel = window.getSelection();
+
+            if (position === 'start') {
+                if (newEditableEl.firstChild) {
+                    range.setStart(newEditableEl.firstChild, 0);
+                } else {
+                    range.setStart(newEditableEl, 0);
+                }
+            } else { // 'end'
+                range.selectNodeContents(newEditableEl);
+                range.collapse(false); 
+            }
+            
+            sel.removeAllRanges();
+            sel.addRange(range);
+        }
+    }
+    
+    // --- API CALLS FOR BLOCKS ---
+    
+    async _createEmptyTextBlock(index, type = 'text', list_type = 'bullet') {
+        const blockPayload = { type, content: "" };
+        if (type === 'list') blockPayload.list_type = list_type;
+        
+        try {
+            const response = await fetch(`${this.API_BASE_URL}/collections/${this.currentCollectionId}/blocks`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'accept': 'application/json' },
+                body: JSON.stringify(blockPayload)
+            });
+
+            if (!response.ok) throw new Error('Failed to create block');
+            const newBlock = await response.json();
+
+            this.contentMap[newBlock.id] = newBlock;
+            this.orderList.splice(index, 0, newBlock.id);
+            
+            await this._updateOrderList(this.orderList);
+
+            this.renderBlocks();
+            this._focusBlock(newBlock.id, 'start');
+
+        } catch (error) {
+            console.error('Error creating block:', error);
+            alert('Не удалось создать новый блок.');
+        }
+    }
+
+    async _saveBlockContent(blockId, newContentRaw) {
+        const block = this.contentMap[blockId];
+        if (!block) return;
+        
+        let newContent = newContentRaw;
+        let payload = { ...block };
+
+        if (block.type === 'link') {
+            // Если блок - ссылка, то новая строка - это текст ссылки (link_text)
+            // Исходный URL (content) сохраняется, если он не пуст, иначе он должен быть установлен через _replaceBlock
+            payload.link_text = newContent.trim();
+            // content (URL) не меняем
+        } else {
+            // Для всех остальных типов новая строка - это content
+             if (JSON.stringify(block.content) === JSON.stringify(newContent)) return;
+             payload.content = newContent;
+        }
+
+        // Удаляем поля, которые устанавливаются сервером
+        delete payload.qdrant_collection_name; 
+        delete payload.user_id; 
+        delete payload.tag_id;
+        delete payload.name;
+        delete payload.collection_id;
+        
+        try {
+            const response = await fetch(`${this.API_BASE_URL}/collections/${this.currentCollectionId}/blocks`, {
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json', 'accept': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) throw new Error('Failed to save block content');
+            
+            // Обновляем локальную карту контента
+            const savedBlock = await response.json();
+            this.contentMap[blockId] = savedBlock;
+            
+        } catch (error) {
+            console.error('Error saving block content:', error);
+        }
+    }
+
+    async _replaceBlock(blockId, newTypeRaw, currentContent) {
+        // Берем все данные существующего блока для корректного POST
+        const existingBlock = this.contentMap[blockId];
+        if (!existingBlock) return;
+
+        const parts = newTypeRaw.toLowerCase().split(' ');
+        const type = parts[0];
+        
+        let cleanContent = currentContent;
+
+        // Начинаем с полного объекта существующего блока
+        let blockPayload = { ...existingBlock };
+        
+        // Удаляем поля, которые устанавливаются сервером или не нужны
+        delete blockPayload.qdrant_collection_name; 
+        delete blockPayload.user_id; 
+        delete blockPayload.tag_id;
+        delete blockPayload.name; 
+        delete blockPayload.collection_id;
+        
+        // Сбрасываем поля-модификаторы для нового типа
+        delete blockPayload.level;
+        delete blockPayload.list_type;
+        delete blockPayload.media_type;
+        delete blockPayload.file_path;
+        delete blockPayload.file_name;
+        delete blockPayload.link_text; 
+
+
+        switch (type) {
             case 'text':
-                newBlock = { ...baseBlock, content: 'New text paragraph' };
+                blockPayload.type = 'text';
+                blockPayload.content = cleanContent;
+                break;
+            case 'header':
+                const levelMatch = newTypeRaw.match(/(\d)$/);
+                blockPayload.type = 'header';
+                blockPayload.content = cleanContent;
+                blockPayload.level = levelMatch ? parseInt(levelMatch[1]) : 1;
                 break;
             case 'list':
-                newBlock = { ...baseBlock, list_type: 'bullet', content: [] };
+                const listType = newTypeRaw.toLowerCase().includes('number') ? 'number' : 'bullet';
+                blockPayload.type = 'list';
+                blockPayload.content = cleanContent;
+                blockPayload.list_type = listType;
                 break;
-            case 'file':
-                // Для файлового блока сначала нужно загрузить файл
-                await this.uploadFileAndCreateBlock(baseBlock);
-                return;
             case 'link':
-                newBlock = { ...baseBlock, media_type: 'link', content: 'https://' };
+                const url = prompt('Введите URL ссылки:', existingBlock.content || cleanContent || 'https://');
+                if (!url) return;
+                
+                blockPayload.type = 'link';
+                blockPayload.media_type = 'link';
+                blockPayload.content = url; // URL
+                blockPayload.link_text = cleanContent || url; // Текст ссылки
                 break;
-            case 'table':
-                newBlock = { ...baseBlock, content: [[], [], []], row_count: 3, column_count: 3 };
-                break;
+            default:
+                alert('Неизвестный тип блока. Используйте: text, header (1-6), list (bullet/number), link, file.');
+                return;
         }
 
-        await this.saveBlockToServer(newBlock);
+        try {
+            const response = await fetch(`${this.API_BASE_URL}/collections/${this.currentCollectionId}/blocks`, {
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json', 'accept': 'application/json' },
+                body: JSON.stringify(blockPayload)
+            });
+
+            if (!response.ok) throw new Error(`Failed to replace block with ${type}`);
+            const newBlockData = await response.json();
+            
+            this.contentMap[blockId] = newBlockData;
+            this.renderBlocks();
+            this._focusBlock(blockId, 'end');
+
+        } catch (error) {
+            console.error('Error replacing block:', error);
+            alert(`Не удалось заменить блок на ${type}.`);
+        }
     }
 
-    async uploadFileAndCreateBlock(baseBlock) {
+    /**
+     * Обрабатывает процесс выбора и загрузки файла, затем обновляет блок.
+     * @param {string} blockId - ID блока, который нужно заменить файлом.
+     */
+    _handleFileUploadReplace(blockId) {
         const fileInput = document.createElement('input');
         fileInput.type = 'file';
-        fileInput.accept = '*/*';
         
-        fileInput.addEventListener('change', async (e) => {
+        // 1. Немедленно вызываем click(), сохраняя цепочку пользовательского действия
+        fileInput.click(); 
+        
+        fileInput.onchange = async (e) => {
             const file = e.target.files[0];
-            if (!file) return;
+            if (!file) {
+                 fileInput.remove(); // Очистка, если отменено
+                 return;
+            }
 
-            // Определяем тип медиа
-            let mediaType = 'document';
-            if (file.type.startsWith('image/')) mediaType = 'photo';
-            if (file.type.startsWith('audio/')) mediaType = 'audio';
+            // 2. Запрашиваем тип файла только после того, как пользователь выбрал файл
+            const mediaType = prompt("Введите тип файла (photo, audio, document):", 'document');
+            if (!mediaType) {
+                 alert('Операция отменена. Пожалуйста, выберите тип файла.');
+                 fileInput.remove(); // Очистка, если отменено
+                 return;
+            }
 
-            // Загружаем файл на сервер
+            // 3. Выполняем POST-запрос
+            const url = `${this.API_BASE_URL}/collections/${this.currentCollectionId}/file?block_id=${blockId}&media_type=${mediaType}`;
+            
             const formData = new FormData();
             formData.append('file', file);
-
+            
             try {
-                const uploadResponse = await fetch(`http://localhost:8000/files/${this.currentCollectionId}`, {
-                    method: 'POST',
-                    body: formData
-                });
+                const response = await fetch(url, { method: 'POST', body: formData });
+                if (!response.ok) throw new Error('File upload failed');
+                
+                // Получаем обновленные данные блока
+                const updatedBlock = await response.json(); 
+                
+                // Обновляем локальную карту контента
+                this.contentMap[blockId] = updatedBlock;
 
-                if (uploadResponse.ok) {
-                    const filePath = await uploadResponse.text();
-                    
-                    const fileBlock = {
-                        ...baseBlock,
-                        type: 'file',
-                        media_type: mediaType,
-                        file_name: file.name,
-                        file_path: filePath
-                    };
+                // !!! ИСПРАВЛЕНИЕ: Вызываем полную перерисовку, как в _replaceBlock, чтобы избежать
+                // проблем с состоянием DOM, которые могли вызывать перезагрузку.
+                this.renderBlocks(); 
+                
+                // Фокусировка на новом блоке (необязательно, но улучшает UX)
+                this._focusBlock(blockId, 'start'); 
 
-                    await this.saveBlockToServer(fileBlock);
-                }
             } catch (error) {
-                console.error('Error uploading file:', error);
+                alert('Не удалось загрузить файл.');
+                console.error('File block error:', error);
+            } finally {
+                // Обязательная очистка input после завершения операции
+                fileInput.remove();
             }
-        });
-
-        fileInput.click();
+        };
     }
-
-    async saveBlockToServer(blockData) {
-        try {
-            const response = await fetch(`http://localhost:8000/collections/${this.currentCollectionId}/blocks`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'accept': 'application/json'
-                },
-                body: JSON.stringify(blockData)
-            });
-
-            if (response.ok) {
-                const newBlock = await response.json();
-                await this.loadCollectionContent(); // Перезагружаем содержимое
-            }
-        } catch (error) {
-            console.error('Error saving block:', error);
-        }
-    }
-
-    async deleteBlock(blockId) {
-        if (!confirm('Are you sure you want to delete this block?')) return;
+    
+    async _handleDeleteBlock(blockId, focusPrevious = false) {
+        if (!this.currentCollectionId || !blockId) return;
+        
+        let wrapper = this.notionPage.querySelector(`[data-block-id="${blockId}"]`);
+        let prevWrapper = wrapper ? wrapper.previousElementSibling : null;
 
         try {
-            const response = await fetch(`http://localhost:8000/collections/${this.currentCollectionId}/blocks/${blockId}`, {
-                method: 'DELETE'
+            const response = await fetch(`${this.API_BASE_URL}/collections/${this.currentCollectionId}/blocks/${blockId}`, {
+                method: 'DELETE',
+                headers: { 'accept': 'application/json' }
             });
 
-            if (response.ok) {
-                await this.loadCollectionContent(); // Перезагружаем содержимое
+            if (!response.ok) throw new Error('Failed to delete block');
+            
+            delete this.contentMap[blockId];
+            this.orderList = this.orderList.filter(id => id !== blockId);
+            
+            await this._updateOrderList(this.orderList);
+
+            this.renderBlocks();
+            
+            if (focusPrevious && prevWrapper) {
+                const prevBlockId = prevWrapper.getAttribute('data-block-id');
+                this._focusBlock(prevBlockId, 'end');
             }
+
         } catch (error) {
             console.error('Error deleting block:', error);
+            alert('Не удалось удалить блок.');
         }
     }
 
-    getNextOrder() {
-        const blocks = this.notionPage.querySelectorAll('.content-block');
-        return blocks.length;
+    async _updateOrderList(newOrderList) {
+        try {
+            const response = await fetch(`${this.API_BASE_URL}/collections/${this.currentCollectionId}/order`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'accept': 'application/json' },
+                body: JSON.stringify(newOrderList)
+            });
+            if (!response.ok) throw new Error('Failed to update block order');
+        } catch (error) {
+            console.error('Error updating block order:', error);
+        }
+    }
+    
+    // --- ОБРАБОТЧИКИ МЕТАДАННЫХ КОЛЛЕКЦИИ ---
+
+    _renderTagMetadata() {
+        if (!this.allTags.length) {
+            this.tagMetaSpan.innerHTML = '<i class="fas fa-tags"></i> No tags available';
+            return;
+        }
+
+        const currentTag = this.allTags.find(t => t.id === this.currentTagId);
+        
+        if (currentTag) {
+            this.tagMetaSpan.innerHTML = `<i class="fas fa-tags"></i> ${currentTag.name}`;
+        } else {
+            this.tagMetaSpan.innerHTML = `<i class="fas fa-tags"></i> Без тега`;
+        }
     }
 
-    startEditingName() {
-        this.collectionNameDisplay.style.display = 'none';
-        this.collectionNameInput.style.display = 'block';
-        this.collectionNameInput.focus();
-        this.collectionNameInput.select();
+    _populateTagSelect(currentTagId) {
+        this.tagSelect.innerHTML = '';
+        
+        const noTagOption = document.createElement('option');
+        noTagOption.value = 'null';
+        noTagOption.textContent = 'Без тега';
+        noTagOption.selected = currentTagId === null;
+        this.tagSelect.appendChild(noTagOption);
+
+        this.allTags.forEach(tag => {
+            const option = document.createElement('option');
+            option.value = tag.id;
+            option.textContent = tag.name;
+            if (tag.id === currentTagId) {
+                option.selected = true;
+            }
+            this.tagSelect.appendChild(option);
+        });
+        
+        const toggleSelect = () => {
+            if (this.tagSelect.style.display === 'none' || this.tagSelect.style.display === '') {
+                this.tagMetaSpan.style.display = 'none';
+                this.tagSelect.style.display = 'inline-block';
+                this.tagSelect.focus();
+            } else {
+                this.tagSelect.style.display = 'none';
+                this.tagMetaSpan.style.display = 'inline-block';
+                this._renderTagMetadata();
+            }
+        };
+
+        this.tagMetaSpan.removeEventListener('click', toggleSelect);
+        this.tagSelect.removeEventListener('blur', toggleSelect);
+        
+        this.tagMetaSpan.addEventListener('click', toggleSelect);
+        this.tagSelect.addEventListener('blur', toggleSelect);
     }
 
-    async finishEditingName() {
-        const newName = this.collectionNameInput.value.trim();
-        if (newName && newName !== this.currentCollection.name) {
-            // Обновляем название на сервере
-            await this.updateCollectionName(newName);
+    async _handleTagChange() {
+        const tagId = this.tagSelect.value;
+        const newTagId = tagId === 'null' ? null : parseInt(tagId);
+
+        try {
+            const url = `${this.API_BASE_URL}/collections/${this.currentCollectionId}/tags/${newTagId === null ? 'null' : newTagId}`;
+            const response = await fetch(url, {
+                method: 'PUT',
+                headers: { 'accept': 'application/json' }
+            });
+
+            if (!response.ok) throw new Error('Failed to update tag');
+            const data = await response.json();
+
+            this.currentTagId = data.tag_id;
+            this._renderTagMetadata();
+            this.tagSelect.style.display = 'none';
+            this.tagMetaSpan.style.display = 'inline-block';
+            
+            this.explorer.loadData();
+
+        } catch (error) {
+            alert('Не удалось обновить тег коллекции.');
+            console.error('Tag update error:', error);
+            this.tagSelect.value = this.currentTagId === null ? 'null' : this.currentTagId.toString();
+        }
+    }
+
+    _startRename() {
+        if (!this.currentCollectionId) return; 
+        this.nameDisplay.style.display = 'none';
+        this.nameInput.style.display = 'block';
+        this.nameInput.focus();
+    }
+
+    async _finishRename() {
+        const newName = this.nameInput.value.trim();
+        this.nameDisplay.style.display = 'block';
+        this.nameInput.style.display = 'none';
+
+        if (!this.currentCollectionId) {
+            this.nameDisplay.textContent = this.currentCollectionName;
+            return;
+        }
+
+        if (newName === this.currentCollectionName || !newName) {
+            this.nameInput.value = this.currentCollectionName;
+            this.nameDisplay.textContent = this.currentCollectionName;
+            return;
         }
         
-        this.collectionNameDisplay.textContent = newName || this.currentCollection.name;
-        this.collectionNameDisplay.style.display = 'block';
-        this.collectionNameInput.style.display = 'none';
-    }
+        try {
+            const response = await fetch(`${this.API_BASE_URL}/collections/${this.currentCollectionId}/name?name=${encodeURIComponent(newName)}`, {
+                method: 'PUT',
+                headers: { 'accept': 'application/json' }
+            });
 
-    async updateCollectionName(newName) {
-        // Здесь должен быть эндпоинт для обновления названия коллекции
-        // Пока просто обновляем локально
-        this.currentCollection.name = newName;
-    }
+            if (!response.ok) throw new Error('Failed to update name');
+            const data = await response.json();
+            
+            this.currentCollectionName = data.name;
+            this.nameDisplay.textContent = data.name;
+            this.nameInput.value = data.name;
 
-    async updateCollectionTag(tagId) {
-        // Здесь должен быть эндпоинт для обновления тега коллекции
-        console.log('Update collection tag to:', tagId);
+            this.explorer.loadData(); 
+
+        } catch (error) {
+            alert('Не удалось обновить имя коллекции. Проверьте консоль.');
+            console.error('Rename error:', error);
+            this.nameInput.value = this.currentCollectionName;
+            this.nameDisplay.textContent = this.currentCollectionName;
+        }
     }
 }

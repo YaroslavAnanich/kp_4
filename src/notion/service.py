@@ -3,10 +3,10 @@ from uuid import UUID
 
 from src.core.database import engine, session_factory
 from src.core.utils.file_util import FileUtil
-from src.notion.models import QdrantCollectionOrm, TagOrm
+from src.notion.models import CollectionOrm, TagOrm
 from src.notion.mysql import NotionMysql
 from src.notion.qdrant import NotionQdrant
-from src.notion.schemes import AnyBlock, ListBlock, TableBlock
+from src.notion.schemes import AnyBlock
 
 
 class NotionService:
@@ -18,19 +18,26 @@ class NotionService:
         self.file_util = FileUtil()
 
 
-    async def create_collection(self, user_id: int, name: str) -> QdrantCollectionOrm:
-        qdrant_id = await self.qdrant.create_collection()
-        return self.mysql.add_qdrant_collection(user_id=user_id, qdrant_id=qdrant_id, name=name)
+    async def create_collection(self, user_id: int, name: str) -> CollectionOrm:
+        qdrant_collection_name = await self.qdrant.create_collection()
+        return self.mysql.add_collection(user_id=user_id, qdrant_collection_name=qdrant_collection_name, name=name)
 
-    async def delete_collection(self, qdrant_id: str, collection_id: str) -> bool:
-        await self.qdrant.delete_collection(qdrant_id)
-        self.mysql.delete_qdrant_collection_by_id(collection_id)
+    async def delete_collection(self, collection_id: int) -> bool:
+        collection = self.mysql.get_collection_by_id(collection_id=collection_id)
+        await self.qdrant.delete_collection(collection.qdrant_collection_name)
+        self.mysql.delete_collection_by_id(collection_id)
 
-    async def update_qdrant_collection(self, collection_id: str, tag_id: str, name: str) -> None:
-        self.mysql.update_qdrant_collection_by_id(collection_id=collection_id, tag_id=tag_id, name=name)
+    async def update_collection_tag(self, collection_id: int, tag_id: int) -> None:
+        return self.mysql.update_collection_tag_by_id(collection_id=collection_id, tag_id=tag_id)
+        
+    async def update_collection_name(self, collection_id: int, name: str) -> None:
+        return self.mysql.update_collection_name_by_id(collection_id=collection_id, name=name)
+        
+    async def update_collection_order_list(self, collection_id: int, order_list: list[int]) -> None:
+        return self.mysql.update_collection_order_list_by_id(collection_id=collection_id, order_list=order_list)
 
-    async def get_all_qdrant_collections(self, user_id: int) -> list[QdrantCollectionOrm]:
-        return self.mysql.get_all_qdrant_collections_by_user_id(user_id=user_id)
+    async def get_all_collections(self, user_id: int) -> list[CollectionOrm]:
+        return self.mysql.get_all_collections_by_user_id(user_id=user_id)
 
     async def create_tag(self, user_id: int, name: str) -> TagOrm:
         return self.mysql.add_tag(user_id=user_id ,name=name)
@@ -41,111 +48,33 @@ class NotionService:
     async def delete_tag(self, tag_id: int) -> bool:
         return self.mysql.delete_tag_by_id(tag_id=tag_id)
 
-    async def add_block(self, collection_name: str, block: AnyBlock) -> AnyBlock:
-        return await self.qdrant.add_block(collection_name, block)
+    async def add_block(self, collection_id: int, block: AnyBlock) -> AnyBlock:
+        collection = self.mysql.get_collection_by_id(collection_id=collection_id)
+        return await self.qdrant.add_block(collection.qdrant_collection_name, block)
 
-    async def delete_block(self, collection_name: str, block_id: Union[str, int]) -> bool:
-        return await self.qdrant.delete_block(collection_name, block_id)
+    async def delete_block(self, collection_id: int, block_id: Union[str, int]) -> bool:
+        collection = self.mysql.get_collection_by_id(collection_id=collection_id)
+        return await self.qdrant.delete_block(collection.qdrant_collection_name, block_id)
 
-    async def update_block(self, collection_name: str, block: AnyBlock) -> AnyBlock:
-        return await self.qdrant.update_block(collection_name, block)
-
-    async def get_collection(self, collection_name: str) -> List[AnyBlock]:
-        # 1. Получаем все точки из коллекции
-        points = await self.qdrant.get_collection_blocks(collection_name)
-
-        if not points:
-            return []
-
-        # 2. Создаем кэш всех блоков: {UUID: AnyBlock}
-        block_cache: Dict[UUID, AnyBlock] = {}
-
-        for point in points:
-            payload = point.get('payload')
-            point_id = point.get('id')
-
-            if payload and point_id is not None:
-                try:
-                    processed_payload = payload.copy()
-                    if isinstance(point_id, int):
-                        processed_payload['id'] = str(point_id)
-
-                    block = self.qdrant.payload_to_pydantic(processed_payload)
-
-                    if block.id is not None:
-                        # Нормализуем UUID к одному типу
-                        normalized_id = UUID(str(block.id))
-                        block_cache[normalized_id] = block
-                        print(f"✅ Добавлен в кэш: {normalized_id} ({block.type})")
-
-                except Exception as e:
-                    print(f"❌ Ошибка десериализации блока {point_id}: {e}")
-                    continue
-
-        # Отладочная информация
-        print(f"📦 Всего блоков в кэше: {len(block_cache)}")
-        print("🔍 ID в кэше:", [str(id) for id in block_cache.keys()])
-
-        # 3. Разрешаем вложенные блоки
-        resolved_root_blocks: List[AnyBlock] = []
-
-        for block_id, block in block_cache.items():
-            if hasattr(block, 'order') and block.order is not None:
-                print(f"🔄 Обрабатываем корневой блок: {block_id} ({block.type})")
-                if hasattr(block, 'content'):
-                    print(f"   Content: {block.content}")
-                resolved_block = self._resolve_nested_blocks(block, block_cache)
-                resolved_root_blocks.append(resolved_block)
-
-        # 4. Сортируем и возвращаем
-        resolved_root_blocks.sort(key=lambda block: block.order)
-        return resolved_root_blocks
-
-    def _resolve_nested_blocks(self, block: AnyBlock, block_cache: Dict[UUID, AnyBlock]) -> AnyBlock:
-        """Рекурсивно заменяет UUID в поле 'content' на реальные объекты блоков."""
-
-        if not hasattr(block, 'content') or block.content is None:
-            return block
-
-        updated_data = block.model_dump()
-
-        # Разрешение списков
-        if isinstance(block, ListBlock):
-            print(f"📝 Обрабатываем ListBlock: {block.id}")
-            resolved_items = []
-            for item_id in block.content:
-                normalized_id = UUID(str(item_id))
-                print(f"   🔍 Ищем элемент: {normalized_id}")
-                if normalized_id in block_cache:
-                    print(f"   ✅ Найден в кэше: {normalized_id}")
-                    nested_block = block_cache[normalized_id]
-                    # Преобразуем блок в dict для content
-                    resolved_items.append(nested_block.model_dump())
-                else:
-                    print(f"   ❌ Не найден в кэше: {normalized_id}")
-                    resolved_items.append(item_id)
-            updated_data['content'] = resolved_items
-            return ListBlock(**updated_data)
-
-        # Разрешение таблиц
-        elif isinstance(block, TableBlock):
-            resolved_body = []
-            for row in block.content:
-                resolved_row = []
-                for cell_id in row:
-                    normalized_id = UUID(str(cell_id))
-                    if normalized_id in block_cache:
-                        nested_block = block_cache[normalized_id]
-                        # Преобразуем блок в dict для content
-                        resolved_row.append(nested_block.model_dump())
-                    else:
-                        resolved_row.append(cell_id)
-                resolved_body.append(resolved_row)
-            updated_data['content'] = resolved_body
-            return TableBlock(**updated_data)
-
-        # Для остальных блоков
-        return block
+    async def get_collection_content(self, collection_id: int) -> List[AnyBlock]:
+        collection = self.mysql.get_collection_by_id(collection_id=collection_id)
+        point_list = await self.qdrant.get_collection_blocks(collection.qdrant_collection_name)
+        block_list = []
+        for point in point_list:
+            block = self.qdrant.payload_to_pydantic(point.get("payload"))
+            block.id = point.get("id")
+            block_list.append(block)
+        
+        # Создаем словарь для быстрого поиска блоков по ID
+        block_dict = {block.id: block for block in block_list}
+        
+        # Сортируем блоки в соответствии с order_list
+        sorted_blocks = []
+        for block_id in collection.order_list:
+            if block_id in block_dict:
+                sorted_blocks.append(block_dict[block_id])
+        
+        return {"content": sorted_blocks, "order_list": collection.order_list}
 
 
     async def search_in_notion(self, query_text: str, collection_names: List[str], limit: int = 10) -> str:

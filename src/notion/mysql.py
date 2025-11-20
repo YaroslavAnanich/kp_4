@@ -1,5 +1,6 @@
+from typing import Optional
 from sqlalchemy import select, update
-from src.notion.models import QdrantCollectionOrm, TagOrm
+from src.notion.models import CollectionOrm, TagOrm
 
 
 class NotionMysql:
@@ -7,11 +8,11 @@ class NotionMysql:
         self.engine = engine
         self.session_factory = session_factory
 
-    def add_qdrant_collection(self, user_id: int, qdrant_id: str, name: str) -> QdrantCollectionOrm:
+    def add_collection(self, user_id: int, qdrant_collection_name: str, name: str) -> CollectionOrm:
         with self.session_factory() as session:
-            collection = QdrantCollectionOrm(
+            collection = CollectionOrm(
                 user_id = user_id,
-                qdrant_id=qdrant_id,
+                qdrant_collection_name = qdrant_collection_name,
                 name=name
             )
             session.add(collection)
@@ -19,11 +20,11 @@ class NotionMysql:
             session.refresh(collection)
             return collection
 
-    def delete_qdrant_collection_by_id(self, collection_id: str) -> bool:
+    def delete_collection_by_id(self, collection_id: int) -> bool:
         with self.session_factory() as session:
             collection = session.execute(
-                select(QdrantCollectionOrm)
-                .where(QdrantCollectionOrm.id == collection_id)
+                select(CollectionOrm)
+                .where(CollectionOrm.id == collection_id)
             ).scalar_one_or_none()
 
             if collection:
@@ -32,24 +33,77 @@ class NotionMysql:
                 return True
             return False
 
-    def update_qdrant_collection_by_id(self, collection_id: str, tag_id: int, name: str) -> None:
-
+    def update_collection_tag_by_id(self, collection_id: int, tag_id: int) -> Optional[CollectionOrm]:
         with self.session_factory() as session:
-            query = (
-                update(QdrantCollectionOrm)
-                .where(QdrantCollectionOrm.id == collection_id)
-                .values(tag_id=tag_id, name=name)
+            # Обновляем коллекцию
+            update_query = (
+                update(CollectionOrm)
+                .where(CollectionOrm.id == collection_id)
+                .values(tag_id=tag_id)
             )
-            session.execute(query)
+            session.execute(update_query)
             session.commit()
+            
+            # Получаем обновленную коллекцию
+            select_query = (
+                select(CollectionOrm)
+                .where(CollectionOrm.id == collection_id)
+            )
+            result = session.execute(select_query)
+            return result.scalar_one_or_none()
 
+    def update_collection_name_by_id(self, collection_id: int, name: str) -> Optional[CollectionOrm]:
+        with self.session_factory() as session:
+            # Обновляем коллекцию
+            update_query = (
+                update(CollectionOrm)
+                .where(CollectionOrm.id == collection_id)
+                .values(name=name)
+            )
+            session.execute(update_query)
+            session.commit()
+            
+            # Получаем обновленную коллекцию
+            select_query = (
+                select(CollectionOrm)
+                .where(CollectionOrm.id == collection_id)
+            )
+            result = session.execute(select_query)
+            return result.scalar_one_or_none()
 
+    def update_collection_order_list_by_id(self, collection_id: int, order_list: list[str]) -> Optional[CollectionOrm]:
+        with self.session_factory() as session:
+            # Обновляем коллекцию
+            update_query = (
+                update(CollectionOrm)
+                .where(CollectionOrm.id == collection_id)
+                .values(order_list=order_list)
+            )
+            session.execute(update_query)
+            session.commit()
+            
+            # Получаем обновленную коллекцию
+            select_query = (
+                select(CollectionOrm)
+                .where(CollectionOrm.id == collection_id)
+            )
+            result = session.execute(select_query)
+            return result.scalar_one_or_none()
 
-    def get_all_qdrant_collections_by_user_id(self, user_id: int) -> list[QdrantCollectionOrm]:
+    def get_collection_by_id(self, collection_id: int) -> CollectionOrm:
         with self.session_factory() as session:
             query = (
-                select(QdrantCollectionOrm)
-                .where(QdrantCollectionOrm.user_id == user_id)
+                select(CollectionOrm)
+                .where(CollectionOrm.id == collection_id)
+            )
+            result = session.execute(query)
+            return result.scalar_one_or_none()    
+
+    def get_all_collections_by_user_id(self, user_id: int) -> list[CollectionOrm]:
+        with self.session_factory() as session:
+            query = (
+                select(CollectionOrm)
+                .where(CollectionOrm.user_id == user_id)
             )
             result = session.execute(query)
             return result.scalars().all()

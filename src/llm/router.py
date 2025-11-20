@@ -60,7 +60,7 @@ async def search_in_llm(
         collection_names = []
         collections = llm_service.get_collection_context_from_chat(chat_id=chat_id)
         for collection in collections:
-            collection_names.append(collection.qdrant_id)
+            collection_names.append(collection.qdrant_collection_name)
         qdrant_context = await notion_service.search_in_notion(request, collection_names)
         return llm_service.search_in_llm(
             request=request,

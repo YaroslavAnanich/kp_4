@@ -2,7 +2,7 @@ import uuid
 
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, Path
 from starlette.responses import FileResponse
-from src.notion.schemes import AnyBlock
+from src.notion.schemes import AnyBlock, FileBlock
 from src.notion.service import NotionService
 from src.core.utils.file_util import FileUtil
 from functools import lru_cache
@@ -23,21 +23,29 @@ async def create_collection(user_id: int, name: str, service: NotionService = De
     return collection
 
 @router.delete("/collections/{collection_id}")
-async def delete_collection(qdrant_id: str, collection_id: str, service: NotionService = Depends(get_notion_service)):
+async def delete_collection(collection_id: int, service: NotionService = Depends(get_notion_service)):
     try:
-        await service.delete_collection(qdrant_id=qdrant_id, collection_id=collection_id)
+        await service.delete_collection(collection_id=collection_id)
         return {"message": "The collection has been successfully deleted."}
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"Failed to delete collection: {e}")
 
 @router.put("/collections/{collection_id}/tags/{tag_id}")
-async def update_qdrant_collection(collection_id: str, name: str, tag_id: str = None, service: NotionService = Depends(get_notion_service)):
-    db_tag_id = tag_id if tag_id.lower() != 'null' else None
-    return await service.update_qdrant_collection(collection_id=collection_id, tag_id=db_tag_id, name=name)
+async def update_collection_tag(collection_id: int, tag_id: str = None, service: NotionService = Depends(get_notion_service)):
+    return await service.update_collection_tag(collection_id=collection_id, tag_id=tag_id)
+
+
+@router.put("/collections/{collection_id}/name")
+async def update_collection_name(collection_id: int, name: str, service: NotionService = Depends(get_notion_service)):
+    return await service.update_collection_name(collection_id=collection_id, name=name)
+
+@router.put("/collections/{collection_id}/order")
+async def update_collection_order_list(collection_id: int, order_list: list[str], service: NotionService = Depends(get_notion_service)):
+    return await service.update_collection_order_list(collection_id=collection_id, order_list=order_list)
 
 @router.get("/users/{user_id}/collections")
-async def get_all_qdrant_collections(user_id: int , service: NotionService = Depends(get_notion_service)):
-    return await service.get_all_qdrant_collections(user_id=user_id)
+async def get_all_collections(user_id: int , service: NotionService = Depends(get_notion_service)):
+    return await service.get_all_collections(user_id=user_id)
 
 @router.post("/tags")
 async def create_tags(user_id: int ,name: str, service: NotionService = Depends(get_notion_service)):
@@ -51,38 +59,41 @@ async def delete_tag(tag_id: int, service: NotionService = Depends(get_notion_se
 async def get_all_tags(user_id: int, service: NotionService = Depends(get_notion_service)):
     return await service.get_all_tags(user_id=user_id)
 
-@router.get("/collections/{collection_name}")
-async def get_collection(collection_name: str, service: NotionService = Depends(get_notion_service)):
-    collection = await service.get_collection(collection_name)
-    return {'collection': collection}
+@router.get("/collections/{collection_id}")
+async def get_collection_content(collection_id: int, service: NotionService = Depends(get_notion_service)):
+    content = await service.get_collection_content(collection_id=collection_id)
+    return content
 
-@router.post("/collections/{collection_name}/blocks")
+@router.post("/collections/{collection_id}/blocks")
 async def add_block_to_collection(
-    collection_name: str,
+    collection_id: int,
     block: AnyBlock,
     service: NotionService = Depends(get_notion_service),
 ):
-    qdrant_block = await service.add_block(collection_name, block)
-    return qdrant_block
+    block = await service.add_block(collection_id=collection_id, block=block)
+    return block
 
-@router.post("/files/{server_name}")
-async def get_file(file: UploadFile, file_util: FileUtil = Depends(get_file_util)):
-    return file_util.save_file(file=file.file, filename=file.filename)
 
-@router.put("/collections/{collection_name}/blocks/{block_id}")
-async def update_block_in_collection(
-    collection_name: str,
-    block: AnyBlock,
-    service: NotionService = Depends(get_notion_service)
+@router.post("/collections/{collection_id}/file")
+async def add_file_block_to_collection(
+    collection_id: int,
+    block_id: str,
+    media_type: str,
+    file: UploadFile,
+    file_util: FileUtil = Depends(get_file_util),
+    service: NotionService = Depends(get_notion_service),
 ):
-    qdrant_block = await service.update_block(collection_name, block)
-    return qdrant_block
+    filename, file_path = file_util.save_file(file=file.file, filename=file.filename)
+    file_block = FileBlock(id=block_id, media_type=media_type, file_name=filename, file_path=file_path)
+    block = await service.add_block(collection_id, file_block)
+    return block
 
-@router.delete("/collections/{collection_name}/blocks/{block_id}")
+
+@router.delete("/collections/{collection_id}/blocks/{block_id}")
 async def delete_block_from_collection(
-    collection_name: str,
+    collection_id: int,
     block_id: str,
     service: NotionService = Depends(get_notion_service)
 ):
-    await service.delete_block(collection_name, block_id)
+    await service.delete_block(collection_id=collection_id, block_id=block_id)
     return {"block_id": block_id, "message": "The block has been successfully deleted."}

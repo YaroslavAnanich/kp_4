@@ -1,11 +1,21 @@
-import { NotionExplorer } from "./notion/scripts/notion_explorer.js";
 import { CollectionViewer } from "./notion/scripts/collection_viewer.js";
+import { NotionExplorer } from "./notion/scripts/notion_explorer.js";
 
-// Инициализация когда DOM загружен
+// --- КОНФИГУРАЦИЯ ---
+const API_BASE_URL = 'http://localhost:8000';
+const USER_ID = 1;
+// ---------------------
+
 document.addEventListener('DOMContentLoaded', () => {
-    const notionExplorer = new NotionExplorer();
-    const collectionViewer = new CollectionViewer();
+    // 1. Создаем экземпляр CollectionViewer
+    // Временно передаем null в качестве explorer, так как NotionExplorer еще не создан.
+    const collectionViewer = new CollectionViewer(API_BASE_URL, null);
+    window.collectionViewer = collectionViewer; // Для удобства отладки
 
-    // Интегрируем CollectionViewer с NotionExplorer
-    notionExplorer.setCollectionViewer(collectionViewer);
+    // 2. Создаем экземпляр NotionExplorer, передавая ему Viewer
+    const notionExplorer = new NotionExplorer(API_BASE_URL, USER_ID, collectionViewer);
+    window.notionExplorer = notionExplorer; // Для удобства отладки
+
+    // 3. Устанавливаем ссылку на explorer в CollectionViewer (замыкание цикла зависимости)
+    collectionViewer.explorer = notionExplorer;
 });
