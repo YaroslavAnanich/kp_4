@@ -1,11 +1,4 @@
-/*
- * style_viewer.css
- * Обновленные стили для CollectionViewer, стилизованные под Notion.
- * Включает: красивый макет, стили для заголовков, списков, таблиц, 
- * редактируемых ссылок, аккуратное отображение файловых/медиа-блоков и модальное окно блоков.
- */
-
-/* --- Notion Page Layout and Typography --- */
+/* ui/notion/styles/style_viewer.css */
 .notion-page {
     flex-grow: 1;
     padding: 30px;
@@ -13,67 +6,59 @@
     font-family: 'Roboto', sans-serif;
     line-height: 1.6;
     color: #37352f;
-    background-color: #ffffff; /* Белый фон страницы */
+    background-color: #ffffff;
 }
 
-/* Ограничение ширины контента для лучшей читаемости (как в Notion) */
 .notion-page > *:not(.notion-header) {
     max-width: 800px;
     margin-left: auto;
     margin-right: auto;
 }
 
-/* --- Block Wrapper Styles --- */
 .block-wrapper {
     position: relative;
-    margin: 3px 0; /* Небольшой вертикальный отступ */
-    padding: 0 5px; 
-    min-height: 1.5em; 
-    transition: background-color 0.2s ease, box-shadow 0.1s ease;
-    display: flex; /* Для позиционирования кнопки удаления */
+    margin: 3px 0;
+    padding: 0 5px;
+    min-height: 1.5em;
+    transition: background-color 0.2s ease;
+    display: flex;
     align-items: flex-start;
 }
 
-/* Стиль при наведении на блок */
 .block-wrapper:hover {
-    background-color: #f7f7f5; /* Светло-серый фон при наведении */
+    background-color: #f7f7f5;
 }
 
-/* --- Delete Button (Controls) --- */
 .delete-block-btn {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    left: -25px; /* Позиционирование слева от блока */
+    left: -25px;
     background: none;
     border: none;
     padding: 4px;
     cursor: pointer;
-    color: #c0c0c0; /* Едва заметный цвет */
+    color: #c0c0c0;
     border-radius: 3px;
-    opacity: 0; /* Изначально скрыт */
+    opacity: 0;
     transition: opacity 0.2s ease, color 0.2s ease, left 0.2s ease;
     font-size: 0.9em;
-    flex-shrink: 0;
     z-index: 10;
 }
 
-/* Показываем кнопку при наведении на родительский блок */
 .block-wrapper:hover .delete-block-btn {
-    opacity: 1; 
-    left: -35px; /* Двигаем чуть дальше */
+    opacity: 1;
+    left: -35px;
 }
 
 .delete-block-btn:hover {
-    color: #e03c31; /* Красный при наведении на саму кнопку */
+    color: #e03c31;
     background-color: #fff0f0;
 }
 
-/* --- Editable Content Styles --- */
-/* Стиль для всех редактируемых элементов (p, h1, li, a, td/th) */
 .notion-block-editable {
     flex-grow: 1;
-    min-width: 0; 
+    min-width: 0;
     word-wrap: break-word;
     white-space: pre-wrap;
     outline: none;
@@ -83,28 +68,12 @@
     transition: background-color 0.1s ease;
 }
 
-/* Состояние фокуса */
 .notion-block-editable:focus {
-    background-color: #fefcfb; /* Почти белый фон */
-    box-shadow: 0 0 0 1px rgba(55, 53, 47, 0.1); /* Тонкая тень */
+    background-color: #fefcfb;
+    box-shadow: 0 0 0 1px rgba(55, 53, 47, 0.1);
 }
 
-/* Стиль заполнителя */
-.notion-block-editable.empty-placeholder {
-    color: #aaa;
-    font-style: italic;
-    cursor: default;
-}
-
-.notion-block-editable.empty-placeholder:focus {
-    color: #aaa; /* Оставляем бледным даже в фокусе */
-}
-
-
-/* --- Block Type Specific Styles --- */
-
-/* Заголовки */
-.block-wrapper h1, .block-wrapper h2, .block-wrapper h3, 
+.block-wrapper h1, .block-wrapper h2, .block-wrapper h3,
 .block-wrapper h4, .block-wrapper h5, .block-wrapper h6 {
     font-family: 'Poppins', sans-serif;
     font-weight: 600;
@@ -116,110 +85,96 @@
 .block-wrapper h1 { font-size: 2em; }
 .block-wrapper h2 { font-size: 1.5em; }
 .block-wrapper h3 { font-size: 1.25em; }
-.block-wrapper h4 { font-size: 1.1em; }
-.block-wrapper h5 { font-size: 1em; }
-.block-wrapper h6 { font-size: 0.9em; }
 
-
-/* Текстовые блоки (p) */
-.block-wrapper p {
-    margin: 0;
+.notion-list-item {
+    display: flex;
+    align-items: flex-start;
+    margin: 4px 0;
 }
 
-
-/* Списки (li) */
-.block-wrapper li {
-    margin: 0;
-    padding: 3px 2px;
-    list-style: none; 
-    position: relative;
-    padding-left: 1.5em; /* Отступ для маркера/номера */
+.notion-list-item.bulleted .list-marker::before {
+    content: "•";
+    margin-right: 8px;
+    color: #666;
+    font-size: 1.2em;
 }
 
-/* Общий контейнер для списков (для сброса счетчика) */
-/* Это может быть родительский div, если блоки с li не обернуты в ul/ol */
-.notion-page .block-wrapper[data-block-type="list"] {
-    counter-reset: list-item;
+/* ИСПРАВЛЕНИЕ: убираем counter-increment для нумерованных списков */
+.notion-list-item.numbered .list-marker::before {
+    content: none; /* Убираем старый контент */
 }
 
-.block-wrapper li[data-list-type="bullet"]::before {
-    content: "•"; /* Маркер-точка */
-    position: absolute;
-    left: 0.5em;
-    color: #37352f;
-}
-
-.block-wrapper li[data-list-type="number"] {
-    counter-increment: list-item;
-}
-
-.block-wrapper li[data-list-type="number"]::before {
-    content: counter(list-item) ".";
-    position: absolute;
-    left: 0;
-    width: 1.5em;
+.notion-list-item.numbered .list-marker {
+    margin-right: 8px;
+    color: #666;
+    min-width: 20px; /* Фиксированная ширина для выравнивания */
     text-align: right;
-    color: #37352f;
 }
 
+/* Убираем старые стили counter */
+.notion-list-item.numbered {
+    counter-reset: none;
+}
 
-/* Редактируемые ссылки (a) */
-.block-wrapper a.external-link {
-    color: #0070c9;
+.notion-link-block {
+    pointer-events: none;
+}
+
+.notion-link-block a.link-display {
+    color: #d9b981;
     text-decoration: underline;
     cursor: pointer;
-    background-color: #f0f8ff; /* Светло-голубой фон для акцента */
-    padding: 1px 3px;
-    display: inline-block; /* Для корректного padding и редактирования */
+    pointer-events: auto;
 }
 
-.block-wrapper a.external-link:hover {
-    text-decoration: none;
-    background-color: #eaf3ff;
-}
-
-/* --- Table Styles --- */
-.notion-table {
+.link-editing {
     width: 100%;
-    border-collapse: collapse;
-    margin: 15px 0;
-    table-layout: fixed; 
-    font-size: 0.9em;
-    cursor: default; 
+    padding: 8px 12px;
+    border: 2px solid #d9b981;
+    border-radius: 6px;
+    background: #fffbe6;
+    font-size: inherit;
     outline: none;
-    border-radius: 4px;
+    min-height: 1.5em;
 }
 
-/* Ячейки (th и td) */
-.notion-table th, .notion-table td {
-    border: 1px solid #e8e4db; /* Тонкая рамка */
-    padding: 8px 10px;
-    vertical-align: top;
-    white-space: pre-wrap;
-    word-break: break-word;
-    background-color: #fff;
-    cursor: text;
+.table-container {
+    width: 100%;
+    margin: 12px 0;
 }
 
-.notion-table th {
-    background-color: #f7f7f5; /* Фон для заголовка таблицы */
-    font-weight: 500;
-    color: #312c26;
+.notion-table {
+    border-collapse: separate;
+    border-spacing: 0;
+    width: 100%;
+    min-width: 500px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    background: white;
+}
+
+.notion-table th,
+.notion-table td {
+    min-width: 140px;
+    height: 40px;
+    padding: 8px 12px;
+    border: 1px solid #e0e0e0;
     text-align: left;
 }
 
-/* Фокус на ячейке */
-.notion-table td:focus, .notion-table th:focus {
-    outline: 2px solid #d9b981; /* Желтый акцент при редактировании */
-    background-color: #fff9e6; 
+.notion-table th {
+    background: #f8f8f8;
+    font-weight: 600;
 }
 
-/* Фокус на самой таблице (для навигации стрелками) */
-.block-wrapper[data-block-type="table"] > .notion-table:focus {
-    box-shadow: 0 0 0 2px #d9b981; /* Желтая обводка при фокусе */
+.block-wrapper.table-focused .notion-table {
+    outline: 3px solid #d9b981;
+    outline-offset: 2px;
+    border-radius: 8px;
 }
 
-/* --- File/Media Styles --- */
 .file-block-content {
     display: flex;
     flex-direction: column;
@@ -245,124 +200,17 @@
     margin-bottom: 10px;
 }
 
-/* Стиль для ссылки на документ/файл (не редактируемой ссылки) */
 .file-block-content a {
-    color: #0070c9;
+    color: #d9b981;
     text-decoration: none;
     font-weight: 500;
-    display: flex;
-    align-items: center;
-    padding: 5px 0;
-    transition: color 0.2s;
 }
 
 .file-block-content a:hover {
     text-decoration: underline;
-    color: #005bb5;
 }
 
-/* Иконка для файла (использует Font Awesome) */
-.file-block-content a::before {
-    content: "\f15b"; /* Иконка Font Awesome для 'file-alt' или 'document' */
-    font-family: 'Font Awesome 6 Free'; 
-    font-weight: 900;
-    margin-right: 8px;
-    color: #d9b981;
-    font-size: 1.1em;
-}
-
-/* Визуальный индикатор для нередактируемых оберток (для навигации стрелками) */
 .block-wrapper[data-block-type="file"]:focus-within {
-    box-shadow: 0 0 0 2px #d9b981; /* Желтая обводка при фокусе */
+    box-shadow: 0 0 0 3px #d9b981;
     border-radius: 6px;
 }
-
-/* --- Block Type Modal Styles (НОВЫЙ БЛОК СТИЛЕЙ) --- */
-
-.block-type-modal {
-    position: fixed; 
-    z-index: 1000;
-    /* Позиционирование (left/top) будет установлено JS */
-}
-
-.modal-content {
-    background: #ffffff;
-    border-radius: 8px;
-    /* Тень, как в Notion: */
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(55, 53, 47, 0.05);
-    width: 350px; 
-    padding: 10px;
-    font-family: 'Roboto', sans-serif;
-}
-
-.modal-search-input {
-    width: 100%;
-    padding: 8px 10px;
-    margin-bottom: 10px;
-    border: 1px solid #e8e4db;
-    border-radius: 4px;
-    font-size: 1em;
-    outline: none;
-    transition: border-color 0.2s;
-}
-
-.modal-search-input:focus {
-    border-color: #d9b981;
-}
-
-.block-type-options {
-    display: flex;
-    flex-direction: column;
-    max-height: 400px; /* Ограничиваем высоту */
-    overflow-y: auto;
-}
-
-.block-option {
-    display: flex;
-    align-items: center;
-    padding: 8px 10px;
-    margin-bottom: 2px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.1s;
-}
-
-.block-option:hover {
-    background-color: #f0f0f0; /* Светло-серый фон при наведении */
-}
-
-.block-option:active {
-    background-color: #e8e4db;
-}
-
-.option-icon {
-    width: 30px;
-    height: 30px;
-    background-color: #f7f7f5;
-    border-radius: 4px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 14px;
-    color: #4a413a;
-    flex-shrink: 0;
-    margin-right: 10px;
-}
-
-.option-text {
-    flex-grow: 1;
-}
-
-.option-name {
-    font-weight: 500;
-    color: #37352f;
-    font-size: 0.95em;
-    line-height: 1.2;
-}
-
-.option-description {
-    font-size: 0.8em;
-    color: #888;
-    line-height: 1.2;
-}
-
