@@ -99,19 +99,17 @@
     font-size: 1.2em;
 }
 
-/* ИСПРАВЛЕНИЕ: убираем counter-increment для нумерованных списков */
 .notion-list-item.numbered .list-marker::before {
-    content: none; /* Убираем старый контент */
+    content: none;
 }
 
 .notion-list-item.numbered .list-marker {
     margin-right: 8px;
     color: #666;
-    min-width: 20px; /* Фиксированная ширина для выравнивания */
+    min-width: 20px;
     text-align: right;
 }
 
-/* Убираем старые стили counter */
 .notion-list-item.numbered {
     counter-reset: none;
 }
@@ -136,6 +134,11 @@
     font-size: inherit;
     outline: none;
     min-height: 1.5em;
+    
+    /* ИСПРАВЛЕНИЕ: фиксированная ширина для поля ввода ссылки */
+    max-width: 400px;
+    min-width: 200px;
+    box-sizing: border-box;
 }
 
 .table-container {

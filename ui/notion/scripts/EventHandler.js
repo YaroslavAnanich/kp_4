@@ -14,7 +14,6 @@ export class EventHandler {
         tagSelect.addEventListener('change', () => this.viewer.metadataManager.handleTagChange());
 
         notionPage.addEventListener('keydown', e => this.handleKeyDown(e));
-        notionPage.addEventListener('input', () => this.handleInput());
         notionPage.addEventListener('blur', e => this.handleBlur(e), true);
 
         document.addEventListener('click', e => blockPicker.handleGlobalClick(e, notionPage));
@@ -31,17 +30,6 @@ export class EventHandler {
             blockId: wrapper?.getAttribute('data-block-id'),
             blockType: wrapper?.getAttribute('data-block-type')
         };
-    }
-
-    handleInput() {
-        const sel = window.getSelection();
-        if (!sel.rangeCount) return;
-        const node = sel.getRangeAt(0).commonAncestorContainer;
-        const el = node.nodeType === 1 ? node : node.parentElement;
-        const data = this.getBlockDataFromEvent({ target: el });
-        if (data && data.editable.isContentEditable) {
-            this.viewer.blockEditor.saveBlockContent(data.blockId, el.textContent);
-        }
     }
 
     handleBlur(e) {
@@ -91,6 +79,12 @@ export class EventHandler {
 
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
+            
+            // ИСПРАВЛЕНИЕ: сохраняем текущий блок перед созданием нового
+            if (data.editable.isContentEditable) {
+                this.viewer.blockEditor.saveBlockContent(blockId, data.editable.textContent);
+            }
+            
             if (isList && isEmpty) {
                 this.viewer.blockEditor.createTextBlockAfter(blockId);
             } else if (isList) {
@@ -110,9 +104,15 @@ export class EventHandler {
         if (e.key === '/' && window.getSelection().getRangeAt(0).startOffset === 0) {
             e.preventDefault();
             this.viewer.blockPicker.show(blockId, data.editable, data.editable.textContent || '', (type) => {
-                if (type === 'file') this.viewer.blockEditor.handleFileUploadReplace(blockId);
-                else if (type === 'table') this.viewer.blockEditor.createTableBlock(blockId);
-                else this.viewer.blockEditor.replaceBlock(blockId, type, data.editable.textContent || '');
+                // ИСПРАВЛЕНИЕ: обрабатываем разные типы файлов
+                if (type.startsWith('file ')) {
+                    const mediaType = type.split(' ')[1]; // photo, audio, document
+                    this.viewer.blockEditor.handleFileUploadReplace(blockId, mediaType);
+                } else if (type === 'table') {
+                    this.viewer.blockEditor.createTableBlock(blockId);
+                } else {
+                    this.viewer.blockEditor.replaceBlock(blockId, type, data.editable.textContent || '');
+                }
             });
         }
     }

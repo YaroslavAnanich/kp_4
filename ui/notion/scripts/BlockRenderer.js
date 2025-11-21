@@ -4,11 +4,10 @@ export class BlockRenderer {
         this.viewer = viewer;
     }
 
-    renderBlocks(notionPage, orderList, contentMap, onDelete) {
+    async renderBlocks(notionPage, orderList, contentMap, onDelete) {
         notionPage.innerHTML = '';
         const fragment = document.createDocumentFragment();
 
-        // Собираем информацию о нумерованных списках
         const numberedListInfo = this._getNumberedListInfo(orderList, contentMap);
 
         orderList.forEach(blockId => {
@@ -19,6 +18,9 @@ export class BlockRenderer {
         });
 
         notionPage.appendChild(fragment);
+        
+        // ИСПРАВЛЕНИЕ: ждем следующего тика event loop для гарантии рендеринга
+        await new Promise(resolve => setTimeout(resolve, 0));
     }
 
     _getNumberedListInfo(orderList, contentMap) {
@@ -29,7 +31,6 @@ export class BlockRenderer {
         orderList.forEach(blockId => {
             const block = contentMap[blockId];
             if (block && block.type === 'list' && block.list_type === 'number') {
-                // Если предыдущий блок не был нумерованным списком, сбрасываем счетчик
                 if (!prevWasNumbered) {
                     currentNumber = 1;
                 }
@@ -98,11 +99,9 @@ export class BlockRenderer {
                 el = document.createElement('div');
                 el.className = `notion-list-item ${block.list_type === 'number' ? 'numbered' : 'bulleted'}`;
                 
-                // ИСПРАВЛЕНИЕ: для нумерованных списков используем правильный номер
                 if (block.list_type === 'number') {
                     const number = numberedListInfo[block.id] || 1;
                     el.innerHTML = `<span class="list-marker"></span><div class="notion-block-editable" contenteditable="true">${content}</div>`;
-                    // Устанавливаем номер через CSS counter или напрямую
                     const marker = el.querySelector('.list-marker');
                     marker.textContent = `${number}.`;
                     marker.style.marginRight = '8px';
@@ -131,6 +130,11 @@ export class BlockRenderer {
                         input.type = 'text';
                         input.value = a.textContent;
                         input.className = 'link-editing';
+                        
+                        // ИСПРАВЛЕНИЕ: устанавливаем фиксированную ширину для поля ввода ссылки
+                        input.style.width = '100%';
+                        input.style.maxWidth = '400px';
+                        input.style.minWidth = '200px';
 
                         el.innerHTML = '';
                         el.appendChild(input);

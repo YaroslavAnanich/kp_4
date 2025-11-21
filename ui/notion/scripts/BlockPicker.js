@@ -26,7 +26,9 @@ export class BlockPicker {
             { type: 'list bullet', name: 'Bullet List', icon: 'fas fa-list-ul' },
             { type: 'list number', name: 'Numbered List', icon: 'fas fa-list-ol' },
             { type: 'link', name: 'Link', icon: 'fas fa-link' },
-            { type: 'file', name: 'File', icon: 'fas fa-file' },
+            { type: 'file photo', name: 'Photo', icon: 'fas fa-image' },
+            { type: 'file audio', name: 'Audio', icon: 'fas fa-music' },
+            { type: 'file document', name: 'Document', icon: 'fas fa-file' },
             { type: 'table', name: 'Table', icon: 'fas fa-table' }
         ];
 

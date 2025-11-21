@@ -1,3 +1,4 @@
+/* ui/notion/styles/style_explorer.css */
 /* General Reset and Base Styles */
 * {
     box-sizing: border-box;
@@ -309,10 +310,14 @@ body {
     border: 1px solid #e8e4db;
     padding: 5px 8px;
     border-radius: 4px;
-    width: 100%;
+    
+    /* ИСПРАВЛЕНИЕ: фиксированная ширина для поля ввода имени */
+    width: auto;
     max-width: 400px;
+    min-width: 200px;
     outline: none;
     transition: border-color 0.2s;
+    box-sizing: border-box;
 }
 
 .collection-name-input:focus {
@@ -320,18 +325,18 @@ body {
 }
 
 #collection-tag-select {
-    border: 1px solid #d4d0c5;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 0.9em;
-    color: #4a413a;
-    margin-left: 5px;
-    background-color: #fcfcf5;
+    /* ИСПРАВЛЕНИЕ: стили перенесены в JavaScript для динамического создания */
 }
 
 .collection-meta span {
     display: flex;
     align-items: center;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.collection-meta span:hover {
+    color: #d9b981;
 }
 
 /* Tag collections spacing */

@@ -2,6 +2,7 @@
 export class BlockEditor {
     constructor(collectionViewer) {
         this.viewer = collectionViewer;
+        this.tableSaveTimeout = null;
     }
 
     async createTextBlockAfter(blockId) {
@@ -10,7 +11,12 @@ export class BlockEditor {
         this.viewer.contentMap[newBlock.id] = newBlock;
         this.viewer.orderList.splice(index, 0, newBlock.id);
         await this.viewer.apiInteractor.updateOrderList(this.viewer.currentCollectionId, this.viewer.orderList);
-        this.viewer.blockRenderer.renderBlocks(this.viewer.notionPage, this.viewer.orderList, this.viewer.contentMap, (id) => this.handleDeleteBlock(id));
+        
+        // ИСПРАВЛЕНИЕ: рендерим и только потом фокусируемся
+        await this.viewer.blockRenderer.renderBlocks(this.viewer.notionPage, this.viewer.orderList, this.viewer.contentMap, (id) => this.handleDeleteBlock(id));
+        
+        // Ждем следующего тика event loop для гарантии рендеринга
+        await new Promise(resolve => setTimeout(resolve, 0));
         this.focusBlock(newBlock.id, 'start');
     }
 
@@ -32,7 +38,11 @@ export class BlockEditor {
         this.viewer.contentMap[newBlock.id] = newBlock;
         this.viewer.orderList.splice(index, 0, newBlock.id);
         await this.viewer.apiInteractor.updateOrderList(this.viewer.currentCollectionId, this.viewer.orderList);
-        this.viewer.blockRenderer.renderBlocks(this.viewer.notionPage, this.viewer.orderList, this.viewer.contentMap, (id) => this.handleDeleteBlock(id));
+        
+        // ИСПРАВЛЕНИЕ: рендерим и только потом фокусируемся
+        await this.viewer.blockRenderer.renderBlocks(this.viewer.notionPage, this.viewer.orderList, this.viewer.contentMap, (id) => this.handleDeleteBlock(id));
+        
+        await new Promise(resolve => setTimeout(resolve, 0));
         this.focusBlock(newBlock.id, 'start');
     }
 
@@ -69,8 +79,13 @@ export class BlockEditor {
             await this.viewer.apiInteractor.updateOrderList(this.viewer.currentCollectionId, this.viewer.orderList);
         }
 
-        this.viewer.blockRenderer.renderBlocks(this.viewer.notionPage, this.viewer.orderList, this.viewer.contentMap, (id) => this.handleDeleteBlock(id));
-        if (blockId) this.focusBlock(blockId, 'start');
+        // ИСПРАВЛЕНИЕ: рендерим и только потом фокусируемся
+        await this.viewer.blockRenderer.renderBlocks(this.viewer.notionPage, this.viewer.orderList, this.viewer.contentMap, (id) => this.handleDeleteBlock(id));
+        
+        if (blockId) {
+            await new Promise(resolve => setTimeout(resolve, 0));
+            this.focusBlock(blockId, 'start');
+        }
     }
 
     async saveBlockContent(blockId, newContent) {
@@ -78,35 +93,40 @@ export class BlockEditor {
         if (!block) return;
 
         if (block.type === 'table') {
-            const table = this.viewer.notionPage.querySelector(`[data-block-id="${blockId}"] table`);
-            if (!table) return;
-            const rows = Array.from(table.querySelectorAll('tr'));
-            const newGrid = rows.map(row => Array.from(row.querySelectorAll('th, td')).map(cell => cell.textContent));
-
-            const payload = { ...block, content: newGrid };
-            delete payload.qdrant_collection_name;
-            delete payload.user_id;
-            delete payload.tag_id;
-            delete payload.name;
-            delete payload.collection_id;
-
-            try {
-                const saved = await this.viewer.apiInteractor.saveBlockContent(this.viewer.currentCollectionId, payload);
-                this.viewer.contentMap[blockId] = saved;
-            } catch (e) {
-                console.error('Table save error:', e);
+            if (this.tableSaveTimeout) {
+                clearTimeout(this.tableSaveTimeout);
             }
+            
+            this.tableSaveTimeout = setTimeout(async () => {
+                const table = this.viewer.notionPage.querySelector(`[data-block-id="${blockId}"] table`);
+                if (!table) return;
+                const rows = Array.from(table.querySelectorAll('tr'));
+                const newGrid = rows.map(row => Array.from(row.querySelectorAll('th, td')).map(cell => cell.textContent));
+
+                const payload = { ...block, content: newGrid };
+                delete payload.qdrant_collection_name;
+                delete payload.user_id;
+                delete payload.tag_id;
+                delete payload.name;
+                delete payload.collection_id;
+
+                try {
+                    const saved = await this.viewer.apiInteractor.saveBlockContent(this.viewer.currentCollectionId, payload);
+                    this.viewer.contentMap[blockId] = saved;
+                } catch (e) {
+                    console.error('Table save error:', e);
+                }
+            }, 500);
             return;
         }
 
-        if (block.type !== 'link' && block.content === newContent) return;
+        if (block.content === newContent) return;
 
         let payload = { ...block };
         
-        // ИСПРАВЛЕНИЕ: для ссылок обновляем content вместо link_text
         if (block.type === 'link') {
-            payload.content = newContent; // ОТПРАВЛЯЕМ В CONTENT
-            delete payload.link_text; // УДАЛЯЕМ link_text из payload
+            payload.content = newContent;
+            delete payload.link_text;
         } else {
             payload.content = newContent;
         }
@@ -129,7 +149,6 @@ export class BlockEditor {
         const block = this.viewer.contentMap[blockId];
         if (!block || block.type !== 'link') return;
 
-        // ИСПРАВЛЕНИЕ: полностью переписан метод - теперь сохраняем текст ссылки в content
         const payload = { ...block, content: newLinkText };
         delete payload.link_text;
         delete payload.qdrant_collection_name;
@@ -187,7 +206,6 @@ export class BlockEditor {
             const saved = await this.viewer.apiInteractor.saveBlockContent(this.viewer.currentCollectionId, payload);
             this.viewer.contentMap[blockId] = saved;
             this.viewer.blockRenderer.renderBlocks(this.viewer.notionPage, this.viewer.orderList, this.viewer.contentMap, (id) => this.handleDeleteBlock(id));
-            // ИСПРАВЛЕНИЕ: возвращаем фокус на таблицу после изменения размера
             setTimeout(() => this.focusBlock(blockId, 'start'), 100);
         } catch (e) {
             console.error('Resize table error:', e);
@@ -249,15 +267,21 @@ export class BlockEditor {
         try {
             const newBlockData = await this.viewer.apiInteractor.replaceBlock(this.viewer.currentCollectionId, blockPayload);
             this.viewer.contentMap[blockId] = newBlockData;
-            this.viewer.blockRenderer.renderBlocks(this.viewer.notionPage, this.viewer.orderList, this.viewer.contentMap, (id) => this.handleDeleteBlock(id));
-            if (type === 'link') this.focusBlock(blockId, 'start');
-            else this.focusBlock(blockId, 'end');
+            await this.viewer.blockRenderer.renderBlocks(this.viewer.notionPage, this.viewer.orderList, this.viewer.contentMap, (id) => this.handleDeleteBlock(id));
+            
+            if (type === 'link') {
+                await new Promise(resolve => setTimeout(resolve, 0));
+                this.focusBlock(blockId, 'start');
+            } else {
+                await new Promise(resolve => setTimeout(resolve, 0));
+                this.focusBlock(blockId, 'end');
+            }
         } catch (error) {
             console.error('Error replacing block:', error);
         }
     }
 
-    handleFileUploadReplace(blockId) {
+    handleFileUploadReplace(blockId, mediaType = null) {
         const fileInput = document.createElement('input');
         fileInput.type = 'file';
         fileInput.click();
@@ -269,17 +293,23 @@ export class BlockEditor {
                 return;
             }
 
-            const mediaType = prompt("Тип файла (photo, audio, document):", 'document')?.trim().toLowerCase();
-            if (!mediaType || !['photo', 'audio', 'document'].includes(mediaType)) {
-                alert('Неверный тип файла.');
-                fileInput.remove();
-                return;
+            // ИСПРАВЛЕНИЕ: если mediaType уже передан, не запрашиваем его
+            let finalMediaType = mediaType;
+            if (!finalMediaType) {
+                finalMediaType = prompt("Тип файла (photo, audio, document):", 'document')?.trim().toLowerCase();
+                if (!finalMediaType || !['photo', 'audio', 'document'].includes(finalMediaType)) {
+                    alert('Неверный тип файла.');
+                    fileInput.remove();
+                    return;
+                }
             }
 
             try {
-                const updatedBlock = await this.viewer.apiInteractor.uploadFile(this.viewer.currentCollectionId, blockId, mediaType, file);
+                const updatedBlock = await this.viewer.apiInteractor.uploadFile(this.viewer.currentCollectionId, blockId, finalMediaType, file);
                 this.viewer.contentMap[blockId] = updatedBlock;
-                this.viewer.blockRenderer.renderBlocks(this.viewer.notionPage, this.viewer.orderList, this.viewer.contentMap, (id) => this.handleDeleteBlock(id));
+                await this.viewer.blockRenderer.renderBlocks(this.viewer.notionPage, this.viewer.orderList, this.viewer.contentMap, (id) => this.handleDeleteBlock(id));
+                
+                await new Promise(resolve => setTimeout(resolve, 0));
                 this.focusBlock(blockId, 'start');
             } catch (error) {
                 alert('Ошибка загрузки файла.');
@@ -301,10 +331,11 @@ export class BlockEditor {
             delete this.viewer.contentMap[blockId];
             this.viewer.orderList = this.viewer.orderList.filter(id => id !== blockId);
             await this.viewer.apiInteractor.updateOrderList(this.viewer.currentCollectionId, this.viewer.orderList);
-            this.viewer.blockRenderer.renderBlocks(this.viewer.notionPage, this.viewer.orderList, this.viewer.contentMap, (id) => this.handleDeleteBlock(id));
+            await this.viewer.blockRenderer.renderBlocks(this.viewer.notionPage, this.viewer.orderList, this.viewer.contentMap, (id) => this.handleDeleteBlock(id));
 
             if (focusPrevious && prevWrapper) {
                 const prevId = prevWrapper.getAttribute('data-block-id');
+                await new Promise(resolve => setTimeout(resolve, 0));
                 this.focusBlock(prevId, 'end');
             }
         } catch (error) {
