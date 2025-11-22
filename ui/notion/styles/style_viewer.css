@@ -20,7 +20,7 @@
     margin: 3px 0;
     padding: 0 5px;
     min-height: 1.5em;
-    transition: background-color 0.2s ease;
+    transition: background-color 0.2s ease, opacity 0.2s ease;
     display: flex;
     align-items: flex-start;
 }
@@ -29,6 +29,12 @@
     background-color: #f7f7f5;
 }
 
+.block-wrapper.dragging {
+    opacity: 0.4 !important;
+}
+
+
+/* ВОЗВРАЩАЕМ: стили для кнопки удаления */
 .delete-block-btn {
     position: absolute;
     top: 50%;
@@ -54,6 +60,31 @@
 .delete-block-btn:hover {
     color: #e03c31;
     background-color: #fff0f0;
+}
+
+/* Стили для индикатора перетаскивания как в Notion */
+.drop-indicator {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: #d9b981;
+    z-index: 1000;
+    border-radius: 2px;
+    pointer-events: none;
+    box-shadow: 0 0 0 2px rgba(217, 185, 129, 0.3);
+}
+
+.drop-indicator::before {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: 10px;
+    width: 8px;
+    height: 8px;
+    background: #d9b981;
+    border-radius: 50%;
+    box-shadow: 0 0 0 2px white;
 }
 
 .notion-block-editable {

@@ -1,4 +1,3 @@
-
 // collection_viewer.js
 import { ApiInteractor } from './ApiInteractor.js';
 import { BlockPicker } from './BlockPicker.js';
@@ -6,6 +5,7 @@ import { BlockRenderer } from './BlockRenderer.js';
 import { EventHandler } from './EventHandler.js';
 import { MetadataManager } from './MetadataManager.js';
 import { BlockEditor } from './BlockEditor.js';
+import { DragDropManager } from './DragDropManager.js'; // Добавляем импорт
 
 export class CollectionViewer {
     // STATE
@@ -30,9 +30,14 @@ export class CollectionViewer {
         this.eventHandler = new EventHandler(this);
         this.metadataManager = new MetadataManager(this, this.tagMetaSpan, this.tagSelect, this.nameDisplay, this.nameInput);
         this.blockEditor = new BlockEditor(this);
+        this.dragDropManager = new DragDropManager(this); // Добавляем менеджер перетаскивания
 
         this.explorer = explorer;
         this.eventHandler.init(this.notionPage, this.nameDisplay, this.nameInput, this.tagSelect, this.blockPicker);
+        
+        // ОБНОВЛЕНИЕ: инициализируем drag&drop один раз при создании
+        this.dragDropManager.init(this.notionPage);
+        
         this.notionPage.innerHTML = '<p>Please select a collection from the left panel to view its content.</p>';
     }
 

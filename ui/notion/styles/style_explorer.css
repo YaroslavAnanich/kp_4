@@ -324,9 +324,6 @@ body {
     border-color: #d9b981;
 }
 
-#collection-tag-select {
-    /* ИСПРАВЛЕНИЕ: стили перенесены в JavaScript для динамического создания */
-}
 
 .collection-meta span {
     display: flex;

@@ -21,6 +21,9 @@ export class BlockRenderer {
         
         // ИСПРАВЛЕНИЕ: ждем следующего тика event loop для гарантии рендеринга
         await new Promise(resolve => setTimeout(resolve, 0));
+        
+        // Инициализируем drag&drop после рендеринга
+        this._initDragAndDrop(notionPage);
     }
 
     _getNumberedListInfo(orderList, contentMap) {
@@ -52,9 +55,11 @@ export class BlockRenderer {
         wrapper.setAttribute('data-block-id', block.id);
         wrapper.setAttribute('data-block-type', block.type);
         wrapper.tabIndex = -1;
+        wrapper.draggable = true;
 
         const contentElement = this._renderBlockContent(block, numberedListInfo);
 
+        // ВОЗВРАЩАЕМ: кнопку удаления вместо drag-handle
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'delete-block-btn';
         deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
@@ -74,6 +79,13 @@ export class BlockRenderer {
         }
 
         return wrapper;
+    }
+
+    _initDragAndDrop(notionPage) {
+        // Инициализируем drag&drop только если еще не инициализирован
+        if (!this.viewer.dragDropManager.initialized) {
+            this.viewer.dragDropManager.init(notionPage);
+        }
     }
 
     _renderBlockContent(block, numberedListInfo) {

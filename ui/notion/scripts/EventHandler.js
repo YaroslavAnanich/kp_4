@@ -95,10 +95,27 @@ export class EventHandler {
             return;
         }
 
-        if (e.key === 'Backspace' && isEmpty && this.viewer.orderList.length > 1) {
-            e.preventDefault();
-            this.viewer.blockEditor.handleDeleteBlock(blockId, true);
-            return;
+        // ИСПРАВЛЕНИЕ: Backspace работает ТОЛЬКО для текстовых блоков и списков (если они пустые)
+        if (e.key === 'Backspace' && this.viewer.orderList.length > 1) {
+            // Определяем типы блоков, которые можно удалять через Backspace
+            const deletableTypes = ['text', 'list']; // Убрали 'header' из удаляемых
+            const isDeletableType = deletableTypes.includes(blockType);
+            
+            // Для списков и текстовых блоков проверяем, что они пустые
+            const shouldDelete = isDeletableType && isEmpty;
+            
+            if (shouldDelete) {
+                e.preventDefault();
+                this.viewer.blockEditor.handleDeleteBlock(blockId, true);
+                return;
+            }
+            
+            // Для header и других НЕудаляемых типов - просто переходим к предыдущему блоку если пусто
+            if (!isDeletableType && isEmpty) {
+                e.preventDefault();
+                this.moveCaretToNearbyBlock(-1);
+                return;
+            }
         }
 
         if (e.key === '/' && window.getSelection().getRangeAt(0).startOffset === 0) {
