@@ -1,15 +1,14 @@
-from sqlalchemy import Integer, ForeignKey, Text
+from sqlalchemy import Integer, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.core.database import Base
 
 
-class ChatOrm(Base):
+class LlmChatOrm(Base):
     __tablename__ = "llm_chat"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.id"))
-
+    name: Mapped[str] = mapped_column(String(200), default="New chat")
 
 class RequestResponseOrm(Base):
     __tablename__ = "request_response"

@@ -1,6 +1,6 @@
 from sqlalchemy import select
 
-from src.llm.models import ChatOrm, RequestResponseOrm, ChatCollectionOrm
+from src.llm.models import LlmChatOrm, RequestResponseOrm, ChatCollectionOrm
 from src.notion.models import CollectionOrm
 
 
@@ -11,9 +11,9 @@ class LlmMysql:
 
 
     #LLM Chats
-    def add_chat(self, user_id: int) -> ChatOrm:
+    def add_chat(self) -> LlmChatOrm:
         with self.session_factory() as session:
-            chat = ChatOrm(user_id=user_id)
+            chat = LlmChatOrm()
             session.add(chat)
             session.commit()
             session.refresh(chat)  # Обновляем объект, чтобы получить сгенерированный ID
@@ -21,7 +21,7 @@ class LlmMysql:
 
     def delete_chat(self, chat_id: int) -> bool:
         with self.session_factory() as session:
-            chat = session.get(ChatOrm, chat_id)
+            chat = session.get(LlmChatOrm, chat_id)
             if chat:
                 session.delete(chat)
                 session.commit()
@@ -29,16 +29,15 @@ class LlmMysql:
             else:
                 return False
 
-    def get_all_chats_by_user_id(self, user_id: int) -> list[ChatOrm]:
+    def get_all_chats(self) -> list[LlmChatOrm]:
         with self.session_factory() as session:
             query = (
                 select(
-                    ChatOrm
+                    LlmChatOrm
                 )
                 .select_from(
-                    ChatOrm
+                    LlmChatOrm
                 )
-                .where(ChatOrm.user_id == user_id)
             )
             result = session.execute(query)
             return result.scalars().all()

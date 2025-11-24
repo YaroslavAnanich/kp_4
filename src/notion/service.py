@@ -18,9 +18,9 @@ class NotionService:
         self.file_util = FileUtil()
 
 
-    async def create_collection(self, user_id: int, name: str) -> CollectionOrm:
+    async def create_collection(self, name: str) -> CollectionOrm:
         qdrant_collection_name = await self.qdrant.create_collection()
-        return self.mysql.add_collection(user_id=user_id, qdrant_collection_name=qdrant_collection_name, name=name)
+        return self.mysql.add_collection(qdrant_collection_name=qdrant_collection_name, name=name)
 
     async def delete_collection(self, collection_id: int) -> bool:
         collection = self.mysql.get_collection_by_id(collection_id=collection_id)
@@ -36,14 +36,14 @@ class NotionService:
     async def update_collection_order_list(self, collection_id: int, order_list: list[int]) -> None:
         return self.mysql.update_collection_order_list_by_id(collection_id=collection_id, order_list=order_list)
 
-    async def get_all_collections(self, user_id: int) -> list[CollectionOrm]:
-        return self.mysql.get_all_collections_by_user_id(user_id=user_id)
+    async def get_all_collections(self) -> list[CollectionOrm]:
+        return self.mysql.get_all_collections()
 
-    async def create_tag(self, user_id: int, name: str) -> TagOrm:
-        return self.mysql.add_tag(user_id=user_id ,name=name)
+    async def create_tag(self,name: str) -> TagOrm:
+        return self.mysql.add_tag(name=name)
 
-    async def get_all_tags(self, user_id: int) -> TagOrm:
-        return self.mysql.get_unique_tags_by_user_id(user_id=user_id)
+    async def get_all_tags(self) -> TagOrm:
+        return self.mysql.get_unique_tags()
 
     async def delete_tag(self, tag_id: int) -> bool:
         return self.mysql.delete_tag_by_id(tag_id=tag_id)

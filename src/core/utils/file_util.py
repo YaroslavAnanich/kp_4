@@ -9,16 +9,17 @@ class FileUtil:
         self.storage_path = storage_path
         os.makedirs(self.storage_path, exist_ok=True)
 
-    def save_file(self, file: BinaryIO, filename: Optional[str] = None) -> str:
+    def save_file(self, file: BinaryIO, path: str, filename: Optional[str] = None) -> str:
         # Пытаемся получить расширение разными способами
         name, extension = os.path.splitext(filename)
         filename = uuid.uuid4()
-        file_path = f"{self.storage_path}{filename}{extension}"
+        file_path = f"{self.storage_path}{path}/{filename}{extension}"
 
         with open(file_path, "wb") as f:
             f.write(file.read())
 
-        return name, f"http://127.0.0.1:8080/var/{filename}{extension}"
+        return name, f"http://127.0.0.1:8080/var/{path}/{filename}{extension}"
+    
 
     @staticmethod
     def get_file_text(file_path: str) -> str:

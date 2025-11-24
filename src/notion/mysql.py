@@ -8,10 +8,9 @@ class NotionMysql:
         self.engine = engine
         self.session_factory = session_factory
 
-    def add_collection(self, user_id: int, qdrant_collection_name: str, name: str) -> CollectionOrm:
+    def add_collection(self, qdrant_collection_name: str, name: str) -> CollectionOrm:
         with self.session_factory() as session:
             collection = CollectionOrm(
-                user_id = user_id,
                 qdrant_collection_name = qdrant_collection_name,
                 name=name
             )
@@ -99,16 +98,15 @@ class NotionMysql:
             result = session.execute(query)
             return result.scalar_one_or_none()    
 
-    def get_all_collections_by_user_id(self, user_id: int) -> list[CollectionOrm]:
+    def get_all_collections(self) -> list[CollectionOrm]:
         with self.session_factory() as session:
             query = (
                 select(CollectionOrm)
-                .where(CollectionOrm.user_id == user_id)
             )
             result = session.execute(query)
             return result.scalars().all()
 
-    def add_tag(self, user_id: int, name: str) -> TagOrm:
+    def add_tag(self, name: str) -> TagOrm:
         with self.session_factory() as session:
             existing_tag = session.execute(
                 select(TagOrm).where(TagOrm.name == name)
@@ -117,17 +115,16 @@ class NotionMysql:
             if existing_tag:
                 return existing_tag
 
-            tag = TagOrm(user_id=user_id, name=name)
+            tag = TagOrm(name=name)
             session.add(tag)
             session.commit()
             session.refresh(tag)
             return tag
 
-    def get_unique_tags_by_user_id(self, user_id: int) -> list[TagOrm]:
+    def get_unique_tags(self) -> list[TagOrm]:
         with self.session_factory() as session:
             query = (
                 select(TagOrm)
-                .where(TagOrm.user_id == user_id)
             )
             result = session.execute(query)
             return result.scalars().all()

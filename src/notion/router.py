@@ -1,25 +1,17 @@
-import uuid
-
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, Path
-from starlette.responses import FileResponse
+from fastapi import APIRouter, HTTPException, Depends, UploadFile
 from src.notion.schemes import AnyBlock, FileBlock
 from src.notion.service import NotionService
 from src.core.utils.file_util import FileUtil
-from functools import lru_cache
+from src.core.dependencies import get_notion_service, get_file_util
+
 
 router = APIRouter(tags=["collections"])
 
-@lru_cache(maxsize=1)
-def get_notion_service() -> NotionService:
-    return NotionService()
 
-@lru_cache(maxsize=1)
-def get_file_util() -> FileUtil:
-    return FileUtil()
 
-@router.post("/users/{user_id}/collections")
-async def create_collection(user_id: int, name: str, service: NotionService = Depends(get_notion_service)):
-    collection = await service.create_collection(user_id=user_id, name=name)
+@router.post("/collections")
+async def create_collection(name: str, service: NotionService = Depends(get_notion_service)):
+    collection = await service.create_collection(name=name)
     return collection
 
 @router.delete("/collections/{collection_id}")
@@ -43,21 +35,21 @@ async def update_collection_name(collection_id: int, name: str, service: NotionS
 async def update_collection_order_list(collection_id: int, order_list: list[str], service: NotionService = Depends(get_notion_service)):
     return await service.update_collection_order_list(collection_id=collection_id, order_list=order_list)
 
-@router.get("/users/{user_id}/collections")
-async def get_all_collections(user_id: int , service: NotionService = Depends(get_notion_service)):
-    return await service.get_all_collections(user_id=user_id)
+@router.get("/collections")
+async def get_all_collections(service: NotionService = Depends(get_notion_service)):
+    return await service.get_all_collections()
 
 @router.post("/tags")
-async def create_tags(user_id: int ,name: str, service: NotionService = Depends(get_notion_service)):
-    return await service.create_tag(user_id=user_id, name=name)
+async def create_tags(name: str, service: NotionService = Depends(get_notion_service)):
+    return await service.create_tag(name=name)
 
 @router.delete("/tags/{tag_id}")
 async def delete_tag(tag_id: int, service: NotionService = Depends(get_notion_service)):
     return await service.delete_tag(tag_id=tag_id)
 
 @router.get("/tags")
-async def get_all_tags(user_id: int, service: NotionService = Depends(get_notion_service)):
-    return await service.get_all_tags(user_id=user_id)
+async def get_all_tags(service: NotionService = Depends(get_notion_service)):
+    return await service.get_all_tags()
 
 @router.get("/collections/{collection_id}")
 async def get_collection_content(collection_id: int, service: NotionService = Depends(get_notion_service)):

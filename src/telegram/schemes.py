@@ -5,12 +5,6 @@ from enum import Enum
 from src.core.schemes import MediaType
 
 
-class ChatSchema(BaseModel):
-    """Схема для представления информации о чате/диалоге."""
-    id: int = Field(..., description="Уникальный идентификатор чата (ID)")
-    name: str = Field(..., description="Название чата/диалога")
-    icon_photo_base64: Optional[str] = Field(None, description="Иконка чата в формате base64")
-
 class MessageSchema(BaseModel):
     """Схема для представления сообщения с детальной информацией о медиа."""
     id: int = Field(..., description="Уникальный идентификатор сообщения (ID)")
@@ -19,4 +13,6 @@ class MessageSchema(BaseModel):
     sender_name: Optional[str] = Field(None, description="Имя отправителя сообщения")
     media_type: Optional[MediaType] = Field(None, description="Тип медиа-контента")
     file_name: Optional[str] = Field(None, description="Имя файла, если применимо")
+    file_path: Optional[str] = Field(None)
+    photo_base64: Optional[str] = Field(None)
 

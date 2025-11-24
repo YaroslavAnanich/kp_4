@@ -3,7 +3,6 @@ import { NotionExplorer } from "./notion/scripts/notion_explorer.js";
 
 // --- КОНФИГУРАЦИЯ ---
 const API_BASE_URL = 'http://localhost:8000';
-const USER_ID = 1;
 // ---------------------
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -13,7 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.collectionViewer = collectionViewer; // Для удобства отладки
 
     // 2. Создаем экземпляр NotionExplorer, передавая ему Viewer
-    const notionExplorer = new NotionExplorer(API_BASE_URL, USER_ID, collectionViewer);
+    const notionExplorer = new NotionExplorer(API_BASE_URL, collectionViewer);
     window.notionExplorer = notionExplorer; // Для удобства отладки
 
     // 3. Устанавливаем ссылку на explorer в CollectionViewer (замыкание цикла зависимости)

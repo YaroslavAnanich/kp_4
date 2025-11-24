@@ -9,16 +9,14 @@ export class NotionExplorer {
     allTags = [];
     collectionViewer; 
     API_BASE_URL;
-    USER_ID;
+
 
     /**
      * @param {string} apiBaseUrl - Базовый URL API.
-     * @param {number} userId - ID пользователя.
      * @param {CollectionViewer} viewer - Ссылка на CollectionViewer.
      */
-    constructor(apiBaseUrl, userId, viewer) {
+    constructor(apiBaseUrl, viewer) {
         this.API_BASE_URL = apiBaseUrl;
-        this.USER_ID = userId;
         this.collectionViewer = viewer;
         
         this.sidebarElement = document.querySelector('.notion-sidebar');
@@ -309,13 +307,13 @@ export class NotionExplorer {
     }
 
     async fetchCollections() {
-        const response = await fetch(`${this.API_BASE_URL}/users/${this.USER_ID}/collections`);
+        const response = await fetch(`${this.API_BASE_URL}/collections`);
         if (!response.ok) throw new Error('Failed to fetch collections');
         return response.json();
     }
 
     async createCollection(name) {
-        const url = `${this.API_BASE_URL}/users/${this.USER_ID}/collections?name=${encodeURIComponent(name)}`;
+        const url = `${this.API_BASE_URL}/collections?name=${encodeURIComponent(name)}`;
         const response = await fetch(url, { method: 'POST', headers: { 'accept': 'application/json' } });
         if (!response.ok) throw new Error('Failed to create collection');
         return response.json();
@@ -328,13 +326,13 @@ export class NotionExplorer {
     }
 
     async fetchTags() {
-        const response = await fetch(`${this.API_BASE_URL}/tags?user_id=${this.USER_ID}`);
+        const response = await fetch(`${this.API_BASE_URL}/tags`);
         if (!response.ok) throw new Error('Failed to fetch tags');
         return response.json();
     }
 
     async createTag(name) {
-        const url = `${this.API_BASE_URL}/tags?user_id=${this.USER_ID}&name=${encodeURIComponent(name)}`;
+        const url = `${this.API_BASE_URL}/tags?name=${encodeURIComponent(name)}`;
         const response = await fetch(url, { method: 'POST', headers: { 'accept': 'application/json' } });
         if (!response.ok) throw new Error('Failed to create tag');
         return response.json();

@@ -1,14 +1,15 @@
 from typing import List, Dict
 from openai import OpenAI
 from src.core.utils.file_util import FileUtil
-from src.llm.models import RequestResponseOrm, ChatOrm
+from src.llm.models import RequestResponseOrm, LlmChatOrm
 from src.llm.mysql import LlmMysql
 from src.llm.schemes import AddNotionContextScheme
 from src.notion.models import CollectionOrm
+from src.core.database import engine, session_factory
 
 
 class LlmService:
-    def __init__(self, engine, session_factory):
+    def __init__(self):
         self.mysql = LlmMysql(engine=engine, session_factory=session_factory)
         self.file_util = FileUtil()
         self.client = OpenAI(base_url="https://openrouter.ai/api/v1",
@@ -17,14 +18,14 @@ class LlmService:
 
 
 
-    def create_chat(self, user_id: int) -> ChatOrm:
-        return self.mysql.add_chat(user_id=user_id)
+    def create_chat(self) -> LlmChatOrm:
+        return self.mysql.add_chat()
 
     def delete_chat(self, chat_id: int) -> bool:
         return self.mysql.delete_chat(chat_id=chat_id)
 
-    def get_user_chats(self, user_id: int) -> List[ChatOrm]:
-        return self.mysql.get_all_chats_by_user_id(user_id)
+    def get_user_chats(self) -> List[LlmChatOrm]:
+        return self.mysql.get_all_chats()
 
     def get_chat_history(self, chat_id: int) -> list[RequestResponseOrm]:
         return self.mysql.get_all_request_responses_by_chat_id(chat_id=chat_id)
