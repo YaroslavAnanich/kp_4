@@ -75,7 +75,7 @@ async def add_file_block_to_collection(
     file_util: FileUtil = Depends(get_file_util),
     service: NotionService = Depends(get_notion_service),
 ):
-    filename, file_path = file_util.save_file(file=file.file, filename=file.filename)
+    filename, file_path = file_util.save_file(file=file.file, path="files", filename=file.filename)
     file_block = FileBlock(id=block_id, media_type=media_type, file_name=filename, file_path=file_path)
     block = await service.add_block(collection_id, file_block)
     return block

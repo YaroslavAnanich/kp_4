@@ -1,94 +1,207 @@
+# src/telegram/service.py
 import io
-from typing import BinaryIO, List, Optional
-from telethon import TelegramClient
-from telethon.tl.types import (Dialog, Message, User, MessageMediaPhoto, MessageMediaDocument, Document,
-                               MessageMediaWebPage)
+import base64
+from typing import BinaryIO, List, Optional, Dict
+
+from telethon import TelegramClient, events
+from telethon.tl.types import (
+    Message, User, MessageMediaPhoto, MessageMediaDocument, Document,
+    MessageMediaWebPage, PeerUser, PeerChannel, PeerChat
+)
+from fastapi import WebSocket
+
 from src.core.database import engine, session_factory
 from src.core.schemes import MediaType
 from src.core.utils.file_util import FileUtil
-from src.notion.schemes import AnyBlock, TextBlock, LinkBlock, FileBlock
 from src.telegram.models import TelegramChatOrm
 from src.telegram.schemes import MessageSchema
 from src.telegram.mysql import TelegramMysql
-import base64
 
 
 class TelegramService:
-    """Сервис для взаимодействия с Telegram API через Telethon, с использованием Pydantic схем."""
-
-    def __init__(self, api_id: int, api_hash: str, session_name: str = 'session'):
-        self.api_id = api_id
-        self.api_hash = api_hash
-        self.session_name = session_name
-        self.client = None
+    def __init__(self, client: TelegramClient):
+        self.client = client
         self.file_util = FileUtil()
         self.mysql = TelegramMysql(engine=engine, session_factory=session_factory)
+        self.connections: Dict[int, List[WebSocket]] = {}   # ключ — твой внутренний chat.id (например 72)
+        self._me = None
 
     async def __aenter__(self):
-        await self._ensure_client()
+        if not self.client.is_connected():
+            await self.client.connect()
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         if self.client:
             await self.client.disconnect()
 
-    async def _ensure_client(self):
-        if self.client is None:
-            self.client = TelegramClient(self.session_name, self.api_id, self.api_hash)
-            await self.client.start()
+    async def start_listener(self):
+        if not self.client.is_connected():
+            await self.client.connect()
 
-    async def _download_file_by_message_id(self, telegram_chat_id: int, message_id: int) -> Optional[io.BytesIO]:
-        """Скачивает файл из Telegram по ID сообщения."""
-        await self._ensure_client()
+        self.client.add_event_handler(
+            self.handle_new_message,
+            events.NewMessage(incoming=True, outgoing=True)
+        )
+        self.client.add_event_handler(
+            self.handle_edit_message,
+            events.MessageEdited(incoming=True, outgoing=True)
+        )
+        print("Telegram listener запущен — приходят ВСЕ сообщения (включая свои)")
 
-        try:            
-            telegram_message = await self.client.get_messages(
-                entity=telegram_chat_id,
-                ids=message_id
-            )
+    async def handle_new_message(self, event: events.NewMessage.Event):
+        await self._process_telegram_event(event.message, "new_message")
 
-            if not telegram_message:
-                return None
-                
-            if not telegram_message.media:
-                return None
+    async def handle_edit_message(self, event: events.MessageEdited.Event):
+        await self._process_telegram_event(event.message, "edit_message")
 
+    async def _process_telegram_event(self, message: Message, event_type: str):
+        # Определяем реальный telegram_chat_id
+        tg_chat_id = None
+        if message.peer_id:
+            if isinstance(message.peer_id, PeerUser):
+                tg_chat_id = message.peer_id.user_id
+            elif isinstance(message.peer_id, PeerChannel):
+                tg_chat_id = int(f"-100{message.peer_id.channel_id}")
+            elif isinstance(message.peer_id, PeerChat):
+                tg_chat_id = message.peer_id.chat_id
 
-            file_bytes = await self.client.download_media(
-                telegram_message,
-                file=bytes
-            )
-            
-            return io.BytesIO(file_bytes)
-        except Exception as e:
-            # Логируем ошибку, если нужно
-            print(f"Ошибка при загрузке файла: {e}")
-            import traceback
-            traceback.print_exc()
+        if tg_chat_id is None:
+            print(f"[TelegramService] Не удалось определить telegram_chat_id для сообщения {message.id}")
+            return
+
+        # Ищем чат по telegram_chat_id (поле в БД!)
+        internal_chat = self.mysql.get_chat_by_telegram_id(tg_chat_id)
+        if not internal_chat:
+            print(f"[TelegramService] Чат с telegram_chat_id={tg_chat_id} не найден в базе")
+            return
+
+        schema = await self._to_message_schema(message)
+        await self.broadcast(internal_chat.id, {"type": event_type, "message": schema.dict()})
+        print(f"→ {event_type} отправлено в UI (chat_id={internal_chat.id}, msg_id={message.id}, outgoing={schema.is_outgoing})")
+
+    async def broadcast(self, internal_chat_id: int, data: dict):
+        if internal_chat_id not in self.connections:
+            return
+
+        dead = []
+        for ws in self.connections[internal_chat_id]:
+            try:
+                await ws.send_json(data)
+            except Exception:
+                dead.append(ws)
+
+        for ws in dead:
+            self.connections[internal_chat_id].remove(ws)
+        if not self.connections[internal_chat_id]:
+            del self.connections[internal_chat_id]
+
+    async def connect(self, websocket: WebSocket, chat_id: int):
+        await websocket.accept()
+        self.connections.setdefault(chat_id, []).append(websocket)
+        print(f"WebSocket подключён к внутреннему chat_id={chat_id}")
+
+    async def disconnect(self, websocket: WebSocket, chat_id: int):
+        if chat_id in self.connections and websocket in self.connections[chat_id]:
+            self.connections[chat_id].remove(websocket)
+            if not self.connections[chat_id]:
+                del self.connections[chat_id]
+            print(f"WebSocket отключён от chat_id={chat_id}")
+
+    async def get_all_chats(self) -> List[TelegramChatOrm]:
+        chats = self.mysql.get_all_chats()
+        if chats:
+            return chats
+        await self._load_chats_from_telegram()
+        return self.mysql.get_all_chats()
+
+    async def get_messages_from_chat(
+        self,
+        chat_id: int,
+        limit: int = 20,
+        offset_id: int = 0
+    ) -> List[MessageSchema]:
+        if not self.client.is_connected():
+            await self.client.connect()
+
+        telegram_chat = self.mysql.get_telegram_chat_by_id(chat_id=chat_id)
+        if not telegram_chat:
+            return []
+
+        cache_records = self.mysql.get_cache_by_telegram_chat_id(telegram_chat.telegram_chat_id)  # ← ИСПРАВЛЕНО
+        cache_dict = {c.telegram_message_id: c.file_path for c in cache_records}
+
+        messages = await self.client.get_messages(
+            entity=telegram_chat.telegram_chat_id,  # ← ИСПРАВЛЕНО
+            limit=limit,
+            offset_id=offset_id
+        )
+
+        result = []
+        for message in messages:
+            schema = await self._to_message_schema(message)
+            if message.id in cache_dict:
+                schema.file_path = cache_dict[message.id]
+            result.append(schema)
+        result.reverse()  # теперь самые новые — внизу
+        return result
+
+    async def add_to_cache(self, chat_id: int, message_id: int):
+        telegram_chat = self.mysql.get_telegram_chat_by_id(chat_id=chat_id)
+        file = await self._download_file_by_message_id(telegram_chat.telegram_chat_id, message_id)  # ← ИСПРАВЛЕНО
+        if not file:
             return None
-        
-        
-        
-    async def _download_media_to_base64(self, message: Message) -> Optional[str]:
-        """Скачивает медиа из сообщения и возвращает в формате base64."""
-        if not message.media:
-            return None
-            
-        try:
-            # Скачиваем медиа в память
-            file_bytes = await self.client.download_media(
-                message.media,
-                file=bytes
-            )
-            
-            if file_bytes:
-                # Кодируем в base64
-                return base64.b64encode(file_bytes).decode('utf-8')
-                
-        except Exception as e:
-            print(f"Ошибка при загрузке медиа для сообщения {message.id}: {e}")
-        
-        return None
+
+        file_name = await self._get_file_name_for_message(telegram_chat.telegram_chat_id, message_id)  # ← ИСПРАВЛЕНО
+        _, file_path = self.file_util.save_file(file=file, path="cache", filename=file_name)
+        self.mysql.add_telegram_cache(chat_id=chat_id, telegram_message_id=message_id, file_path=file_path)
+        return file_path
+
+    async def send_message(self, chat_id: int, text: str):
+        if not self.client.is_connected():
+            await self.client.connect()
+        telegram_chat = self.mysql.get_telegram_chat_by_id(chat_id=chat_id)
+        if not telegram_chat:
+            raise ValueError("Chat not found")
+        await self.client.send_message(telegram_chat.telegram_chat_id, text)  # ← ИСПРАВЛЕНО
+        return {"success": True}
+
+    # ===================== ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ =====================
+
+    async def _to_message_schema(self, message: Message) -> MessageSchema:
+        if self._me is None:
+            self._me = await self.client.get_me()
+
+        sender = await message.get_sender()
+        sender_name = "Unknown"
+        sender_id = None
+        if sender:
+            if isinstance(sender, User):
+                sender_name = (sender.first_name or "") + (f" {sender.last_name}" if sender.last_name else "")
+                sender_id = sender.id
+            else:
+                sender_name = getattr(sender, "title", "Unknown")
+                sender_id = getattr(sender, "id", None)
+
+        media_info = self._get_media_info(message)
+        photo_base64 = None
+        if media_info["media_type"] == MediaType.PHOTO:
+            photo_base64 = await self._download_media_to_base64(message)
+
+        is_outgoing = (sender_id is not None and self._me is not None and sender_id == self._me.id)
+
+        return MessageSchema(
+            id=message.id,
+            tg_chat_id=message.chat_id or 0,
+            text=message.text or "",
+            sender_name=sender_name,
+            sender_id=sender_id,
+            media_type=media_info["media_type"],
+            file_name=media_info["file_name"],
+            photo_base64=photo_base64,
+            file_path=None,
+            is_outgoing=is_outgoing,
+        )
 
     def _get_media_info(self, message: Message) -> dict:
         if not message.media:
@@ -130,154 +243,56 @@ class TelegramService:
 
         return {"media_type": media_type, "file_name": file_name}
 
-    async def _to_message_schema(self, message: Message) -> MessageSchema:
-        sender = await message.get_sender()
-        if isinstance(sender, User):
-            sender_name = sender.first_name
-            if sender.last_name:
-                sender_name += f" {sender.last_name}"
-        else:
-            sender_name = sender.title
+    async def _download_file_by_message_id(self, telegram_chat_id: int, message_id: int) -> Optional[io.BytesIO]:
+        if not self.client.is_connected():
+            await self.client.connect()
+        msg = await self.client.get_messages(telegram_chat_id, ids=message_id)
+        if not msg or not msg.media:
+            return None
+        data = await self.client.download_media(msg, file=bytes)
+        return io.BytesIO(data) if data else None
 
-        media_info = self._get_media_info(message)
+    async def _download_media_to_base64(self, message: Message) -> Optional[str]:
+        if not message.media:
+            return None
+        try:
+            data = await self.client.download_media(message.media, file=bytes)
+            return base64.b64encode(data).decode("utf-8") if data else None
+        except Exception:
+            return None
 
-        text = message.text
-
-        # Инициализируем photo_base64 как None
-        photo_base64 = None
-        
-        # Если тип медиа - фото, загружаем его в base64
-        if media_info.get("media_type") == MediaType.PHOTO:
-            photo_base64 = await self._download_media_to_base64(message)
-
-        return MessageSchema(
-            id=message.id,
-            tg_chat_id=message.chat_id,
-            text=text,
-            sender_name=sender_name,
-            media_type=media_info.get("media_type"),
-            file_name=media_info.get("file_name"),
-            photo_base64=photo_base64  # Добавляем поле с фото в base64
-        )
-
-    async def get_all_chats(self) -> List[TelegramChatOrm]:
-        # Пытаемся получить чаты из MySQL
-        chats = self.mysql.get_all_chats()
-        
-        # Если в MySQL есть чаты, возвращаем их
-        if chats:
-            return chats
-        
-        # Если чатов нет, загружаем их из Telegram
-        await self._load_chats_from_telegram()
-        
-        # Возвращаем обновленный список чатов из MySQL
-        return self.mysql.get_all_chats()
+    async def _get_file_name_for_message(self, telegram_chat_id: int, message_id: int) -> str:
+        if not self.client.is_connected():
+            await self.client.connect()
+        msg = await self.client.get_messages(telegram_chat_id, ids=message_id)
+        if msg and msg.media:
+            info = self._get_media_info(msg)
+            return info["file_name"] or f"file_{message_id}"
+        return f"file_{message_id}"
 
     async def _load_chats_from_telegram(self):
-        """Загружает чаты из Telegram и сохраняет их в MySQL с иконками."""
-        await self._ensure_client()
+        if not self.client.is_connected():
+            await self.client.connect()
         dialogs = await self.client.get_dialogs()
-        
         for dialog in dialogs:
             if dialog.is_user or dialog.is_group or dialog.is_channel:
-                # Получаем информацию о чате для иконки
                 file = await self._download_chat_icon(dialog)
-                file_name = f"chat_icon_{dialog.id}.jpg"
-                
-                # Сохраняем иконку и получаем путь
+                file_path = None
                 if file:
-                    filename, file_path = self.file_util.save_file(
-                        file=file, 
-                        path="icons", 
-                        filename=file_name
-                    )
-                else:
-                    file_path = None
-                
-                # Добавляем чат в MySQL
+                    _, file_path = self.file_util.save_file(file, path="icons", filename=f"chat_icon_{dialog.id}.jpg")
                 self.mysql.add_telegram_chat(
                     tg_chat_id=dialog.id,
                     name=dialog.name,
                     file_path=file_path
                 )
 
-    async def _download_chat_icon(self, dialog: Dialog) -> Optional[BinaryIO]:
-        """Скачивает иконку чата/диалога."""
+    async def _download_chat_icon(self, dialog) -> Optional[BinaryIO]:
         try:
             entity = dialog.entity
-            
-            # Пытаемся скачать фото профиля/чата
-            if hasattr(entity, 'photo') and entity.photo:
-                # Скачиваем фото в память
-                file_bytes = await self.client.download_profile_photo(
-                    entity,
-                    file=bytes
-                )
-                if file_bytes:
-                    return io.BytesIO(file_bytes)
-            
-            # Для пользователей можно попробовать скачать аватар
-            elif hasattr(entity, 'first_name') or hasattr(entity, 'title'):
-                try:
-                    file_bytes = await self.client.download_profile_photo(
-                        entity,
-                        file=bytes
-                    )
-                    if file_bytes:
-                        return io.BytesIO(file_bytes)
-                except Exception as e:
-                    print(f"Не удалось скачать иконку для {entity.id}: {e}")
-                    
-        except Exception as e:
-            print(f"Ошибка при загрузке иконки чата: {e}")
-        
+            if hasattr(entity, "photo") and entity.photo:
+                data = await self.client.download_profile_photo(entity, file=bytes)
+                if data:
+                    return io.BytesIO(data)
+        except Exception:
+            pass
         return None
-
-
-    async def get_messages_from_chat(self, chat_id: int, offset_id: int = 0, limit: int = 20) -> List[MessageSchema]:
-        await self._ensure_client()
-
-        # Получаем кэш для этого телеграм чата
-        telegram_chat = self.mysql.get_telegram_chat_by_id(chat_id=chat_id)
-        cache_records = []
-        if telegram_chat:
-            cache_records = self.mysql.get_cache_by_telegram_chat_id(telegram_chat.telegram_chat_id)
-        
-        # Создаем словарь для быстрого поиска кэша по telegram_message_id
-        cache_dict = {cache.telegram_message_id: cache.file_path for cache in cache_records}
-
-        # Правильная пагинация: загружаем только нужные сообщения
-        # add_offset - смещение от последнего сообщения
-        messages = await self.client.get_messages(
-            telegram_chat.telegram_chat_id, 
-            limit=limit,
-            offset_id=offset_id  # ID сообщения, от которого считать offset
-        )
-        
-        chat: List[MessageSchema] = []
-
-        for message in messages:
-            message_data = await self._to_message_schema(message)
-            
-            # Проверяем есть ли кэш для этого сообщения
-            if message.id in cache_dict:
-                message_data.file_path = cache_dict[message.id]
-            
-            chat.append(message_data)
-        
-        # Если нужны сообщения в хронологическом порядке (старые -> новые)
-        chat.reverse()
-        return chat
-
-    async def add_to_cache(self, chat_id: int, message_id: int, file_name):
-        telegram_chat = self.mysql.get_telegram_chat_by_id(chat_id=chat_id)
-        file = await self._download_file_by_message_id(telegram_chat_id=telegram_chat.telegram_chat_id, message_id=message_id)
-        filename, file_path = self.file_util.save_file(file=file, path="cache" , filename=file_name) 
-        self.mysql.add_telegram_cache(chat_id=chat_id, telegram_message_id=message_id, file_path=file_path)
-        return file_path
-
-    async def disconnect(self):
-        if self.client:
-            await self.client.disconnect()
-

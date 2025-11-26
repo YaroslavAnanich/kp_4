@@ -1,10 +1,12 @@
 /* LLM SECTION */
 .llm-section {
-    width: 380px;
+    width: 320px; /* Фиксированная ширина */
     display: flex;
     flex-direction: column;
     background-color: #f9f5f0;
     padding: 20px;
+    /* ИСПРАВЛЕНИЕ: Гарантируем, что внутренние flex-элементы (llm-page) правильно управляют высотой */
+    min-height: 0; 
 }
 
 /* LLM Header */
@@ -64,8 +66,9 @@
     background-color: #c7a56a;
 }
 
-/* LLM Page */
+/* LLM Page (Область сообщений чата) */
 .llm-page {
+    /* flex-grow: 1 и overflow-y: auto уже установлены и это правильно */
     flex-grow: 1;
     overflow-y: auto;
     margin-bottom: 15px;

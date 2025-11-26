@@ -11,38 +11,38 @@ body {
     background-color: #fcfcf5;
     color: #4a413a;
     height: 100vh;
-    overflow: hidden;
+    overflow: hidden; /* ИСПРАВЛЕНИЕ: Гарантируем, что body не прокручивается */
 }
 
 /* App Container */
 .app-container {
     display: flex;
     width: 100%;
-    height: 100vh;
+    height: 100vh; /* ИСПРАВЛЕНИЕ: Гарантируем, что основной контейнер занимает всю высоту */
 }
 
 /* NOTION SECTION */
 .notion-section {
     display: flex;
-    flex-grow: 1;
+    flex-grow: 1; /* Оставляет Notion-секции заполнять оставшееся пространство */
 }
 
 /* Notion Sidebar */
 .notion-sidebar {
-    width: 220px;
+    width: 220px; /* Фиксированная ширина */
     background-color: #ffffff;
     border-right: 1px solid #e8e4db;
-    overflow-y: auto;
+    overflow-y: auto; /* ИСПРАВЛЕНИЕ: Прокрутка для сайдбара с коллекциями */
     padding: 20px;
     box-shadow: 1px 0 5px rgba(0,0,0,0.03);
 }
 
-/* Notion Content */
+/* Notion Content (Внешний контейнер для шапки и страницы) */
 .notion-content {
     flex-grow: 1;
     display: flex;
-    flex-direction: column;
-    overflow: hidden;
+    flex-direction: column; /* Устанавливаем вертикальный flex для header и page */
+    overflow: hidden; /* Предотвращаем переполнение родительского контейнера */
 }
 
 .notion-header {
@@ -53,6 +53,7 @@ body {
 }
 
 .notion-page {
+    /* flex-grow: 1 и overflow-y: auto уже установлены и это правильно для прокрутки контента */
     flex-grow: 1;
     padding: 30px;
     overflow-y: auto;

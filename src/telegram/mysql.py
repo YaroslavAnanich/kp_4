@@ -1,3 +1,4 @@
+from typing import Optional
 from sqlalchemy import select
 from src.telegram.models import TelegramChatOrm, TelegramCacheOrm
 
@@ -59,3 +60,9 @@ class TelegramMysql:
             result = session.execute(query)
             return result.scalars().all()
     
+    
+    def get_chat_by_telegram_id(self, tg_chat_id: int) -> Optional[TelegramChatOrm]:
+        with self.session_factory() as session:
+            return session.query(TelegramChatOrm).filter(
+                TelegramChatOrm.telegram_chat_id == tg_chat_id
+            ).first()

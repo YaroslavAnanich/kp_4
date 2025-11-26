@@ -6,13 +6,16 @@ from src.core.schemes import MediaType
 
 
 class MessageSchema(BaseModel):
-    """Схема для представления сообщения с детальной информацией о медиа."""
-    id: int = Field(..., description="Уникальный идентификатор сообщения (ID)")
+    id: int
     tg_chat_id: int
-    text: Optional[str] = Field(None, description="Текст сообщения")
-    sender_name: Optional[str] = Field(None, description="Имя отправителя сообщения")
-    media_type: Optional[MediaType] = Field(None, description="Тип медиа-контента")
-    file_name: Optional[str] = Field(None, description="Имя файла, если применимо")
-    file_path: Optional[str] = Field(None)
-    photo_base64: Optional[str] = Field(None)
+    text: Optional[str] = None
+    sender_name: str
+    sender_id: Optional[int] = None
+    media_type: Optional[MediaType] = None
+    file_name: Optional[str] = None
+    file_path: Optional[str] = None
+    photo_base64: Optional[str] = None
+    is_outgoing: bool = False  # ← КЛЮЧЕВОЕ ПОЛЕ
 
+class SendMessageSchema(BaseModel):
+    text: str

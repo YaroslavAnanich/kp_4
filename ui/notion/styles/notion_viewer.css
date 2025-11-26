@@ -1,5 +1,6 @@
 /* ui/notion/styles/style_viewer.css */
 .notion-page {
+    /* flex-grow: 1 и overflow-y: auto уже установлены и это правильно */
     flex-grow: 1;
     padding: 30px;
     overflow-y: auto;
@@ -10,7 +11,7 @@
 }
 
 .notion-page > *:not(.notion-header) {
-    max-width: 800px;
+    max-width: 700px;
     margin-left: auto;
     margin-right: auto;
 }
@@ -91,7 +92,8 @@
     flex-grow: 1;
     min-width: 0;
     word-wrap: break-word;
-    white-space: pre-wrap;
+    white-space: pre-wrap; /* ИСПРАВЛЕНИЕ: Гарантирует перенос текста при вводе */
+    overflow-wrap: break-word; /* Дополнительная гарантия переноса */
     outline: none;
     padding: 3px 2px;
     border-radius: 3px;
@@ -175,6 +177,9 @@
 .table-container {
     width: 100%;
     margin: 12px 0;
+    /* ИСПРАВЛЕНИЕ: Добавляем горизонтальную прокрутку для широких таблиц */
+    overflow-x: auto; 
+    max-width: 100%;
 }
 
 .notion-table {
@@ -217,7 +222,9 @@
     border: 1px solid #e8e4db;
     border-radius: 6px;
     background-color: #f9f9f5;
-    margin: 10px 0;
+    /* ИСПРАВЛЕНИЕ: Убираем центрирование (auto) для выравнивания по левому краю */
+    margin: 10px 0; 
+    max-width: 500px; 
 }
 
 .file-block-content img {
