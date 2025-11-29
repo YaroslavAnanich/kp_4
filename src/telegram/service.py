@@ -13,6 +13,7 @@ from fastapi import WebSocket
 from src.core.database import engine, session_factory
 from src.core.schemes import MediaType
 from src.core.utils.file_util import FileUtil
+from src.notion.schemes import Block, FileBlock, LinkBlock, TextBlock
 from src.telegram.models import TelegramChatOrm
 from src.telegram.schemes import MessageSchema
 from src.telegram.mysql import TelegramMysql
@@ -165,6 +166,69 @@ class TelegramService:
             raise ValueError("Chat not found")
         await self.client.send_message(telegram_chat.telegram_chat_id, text)  # ← ИСПРАВЛЕНО
         return {"success": True}
+
+
+    async def get_message_as_block(self, chat_id: int, message_id: int) -> Optional[Block]:
+        if not self.client.is_connected():
+            await self.client.connect()
+        
+        # Получаем информацию о чате
+        telegram_chat = self.mysql.get_telegram_chat_by_id(chat_id=chat_id)
+        if not telegram_chat:
+            print(f"[get_message_as_block] Чат с ID={chat_id} не найден")
+            return None
+        
+        # Получаем сообщение из Telegram
+        messages = await self.client.get_messages(
+            entity=telegram_chat.telegram_chat_id,
+            ids=message_id
+        )
+        
+        if not messages:
+            print(f"[get_message_as_block] Сообщение с ID={message_id} не найдено в чате {telegram_chat.telegram_chat_id}")
+            return None
+        
+        message = messages[0] if isinstance(messages, list) else messages
+        
+        # Получаем информацию о медиа
+        media_info = self._get_media_info(message)
+        media_type = media_info["media_type"]
+        
+        # Обрабатываем текстовые сообщения
+        if not message.media or media_type is None:
+            if message.text and message.text.strip():
+                return TextBlock(
+                    content=message.text.strip()
+                )
+            return None
+        
+        # Обрабатываем ссылки
+        if media_type == MediaType.LINK:
+            link_content = message.text or ""
+            return LinkBlock(
+                content=link_content
+            )
+        
+        # Обрабатываем файлы (фото, аудио, документы)
+        if media_type in [MediaType.PHOTO, MediaType.AUDIO, MediaType.DOCUMENT]:
+            # Скачиваем файл
+            file = await self._download_file_by_message_id(telegram_chat.telegram_chat_id, message_id)
+            if not file:
+                print(f"[get_message_as_block] Не удалось скачать файл для сообщения {message_id}")
+                return None
+            
+            # Сохраняем файл
+            file_name = await self._get_file_name_for_message(telegram_chat.telegram_chat_id, message_id)
+            _, file_path = self.file_util.save_file(file=file, path="files", filename=file_name)
+            
+            return FileBlock(
+                media_type=media_type,
+                file_name=file_name,
+                file_path=file_path
+            )
+        
+        print(f"[get_message_as_block] Неподдерживаемый тип медиа: {media_type} для сообщения {message_id}")
+        return None
 
     # ===================== ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ =====================
 

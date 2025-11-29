@@ -40,6 +40,16 @@ async def send_message(
 ):
     return await service.send_message(chat_id=chat_id, text=message.text)
 
+@router.get("/tg/{chat_id}/{message_id}/block")
+async def get_message_as_block(
+    chat_id: int,
+    message_id: int,
+    service: TelegramService = Depends(get_telegram_service)
+):
+    return await service.get_message_as_block(chat_id=chat_id, message_id=message_id)
+
+
+
 @router.websocket("/tg/ws/{chat_id}")
 async def websocket_chat(
     websocket: WebSocket,
