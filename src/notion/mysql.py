@@ -1,6 +1,6 @@
 from typing import Optional
 from sqlalchemy import select, update
-from src.notion.models import CollectionOrm, TagOrm
+from src.notion.models import NotionCollectionOrm, TagOrm
 
 
 class NotionMysql:
@@ -8,9 +8,9 @@ class NotionMysql:
         self.engine = engine
         self.session_factory = session_factory
 
-    def add_collection(self, qdrant_collection_name: str, name: str) -> CollectionOrm:
+    def add_collection(self, qdrant_collection_name: str, name: str) -> NotionCollectionOrm:
         with self.session_factory() as session:
-            collection = CollectionOrm(
+            collection = NotionCollectionOrm(
                 qdrant_collection_name = qdrant_collection_name,
                 name=name
             )
@@ -22,8 +22,8 @@ class NotionMysql:
     def delete_collection_by_id(self, collection_id: int) -> bool:
         with self.session_factory() as session:
             collection = session.execute(
-                select(CollectionOrm)
-                .where(CollectionOrm.id == collection_id)
+                select(NotionCollectionOrm)
+                .where(NotionCollectionOrm.id == collection_id)
             ).scalar_one_or_none()
 
             if collection:
@@ -32,12 +32,12 @@ class NotionMysql:
                 return True
             return False
 
-    def update_collection_tag_by_id(self, collection_id: int, tag_id: int) -> Optional[CollectionOrm]:
+    def update_collection_tag_by_id(self, collection_id: int, tag_id: int) -> Optional[NotionCollectionOrm]:
         with self.session_factory() as session:
             # Обновляем коллекцию
             update_query = (
-                update(CollectionOrm)
-                .where(CollectionOrm.id == collection_id)
+                update(NotionCollectionOrm)
+                .where(NotionCollectionOrm.id == collection_id)
                 .values(tag_id=tag_id)
             )
             session.execute(update_query)
@@ -45,18 +45,18 @@ class NotionMysql:
             
             # Получаем обновленную коллекцию
             select_query = (
-                select(CollectionOrm)
-                .where(CollectionOrm.id == collection_id)
+                select(NotionCollectionOrm)
+                .where(NotionCollectionOrm.id == collection_id)
             )
             result = session.execute(select_query)
             return result.scalar_one_or_none()
 
-    def update_collection_name_by_id(self, collection_id: int, name: str) -> Optional[CollectionOrm]:
+    def update_collection_name_by_id(self, collection_id: int, name: str) -> Optional[NotionCollectionOrm]:
         with self.session_factory() as session:
             # Обновляем коллекцию
             update_query = (
-                update(CollectionOrm)
-                .where(CollectionOrm.id == collection_id)
+                update(NotionCollectionOrm)
+                .where(NotionCollectionOrm.id == collection_id)
                 .values(name=name)
             )
             session.execute(update_query)
@@ -64,18 +64,18 @@ class NotionMysql:
             
             # Получаем обновленную коллекцию
             select_query = (
-                select(CollectionOrm)
-                .where(CollectionOrm.id == collection_id)
+                select(NotionCollectionOrm)
+                .where(NotionCollectionOrm.id == collection_id)
             )
             result = session.execute(select_query)
             return result.scalar_one_or_none()
 
-    def update_collection_order_list_by_id(self, collection_id: int, order_list: list[str]) -> Optional[CollectionOrm]:
+    def update_collection_order_list_by_id(self, collection_id: int, order_list: list[str]) -> Optional[NotionCollectionOrm]:
         with self.session_factory() as session:
             # Обновляем коллекцию
             update_query = (
-                update(CollectionOrm)
-                .where(CollectionOrm.id == collection_id)
+                update(NotionCollectionOrm)
+                .where(NotionCollectionOrm.id == collection_id)
                 .values(order_list=order_list)
             )
             session.execute(update_query)
@@ -83,25 +83,25 @@ class NotionMysql:
             
             # Получаем обновленную коллекцию
             select_query = (
-                select(CollectionOrm)
-                .where(CollectionOrm.id == collection_id)
+                select(NotionCollectionOrm)
+                .where(NotionCollectionOrm.id == collection_id)
             )
             result = session.execute(select_query)
             return result.scalar_one_or_none()
 
-    def get_collection_by_id(self, collection_id: int) -> CollectionOrm:
+    def get_collection_by_id(self, collection_id: int) -> NotionCollectionOrm:
         with self.session_factory() as session:
             query = (
-                select(CollectionOrm)
-                .where(CollectionOrm.id == collection_id)
+                select(NotionCollectionOrm)
+                .where(NotionCollectionOrm.id == collection_id)
             )
             result = session.execute(query)
             return result.scalar_one_or_none()    
 
-    def get_all_collections(self) -> list[CollectionOrm]:
+    def get_all_collections(self) -> list[NotionCollectionOrm]:
         with self.session_factory() as session:
             query = (
-                select(CollectionOrm)
+                select(NotionCollectionOrm)
             )
             result = session.execute(query)
             return result.scalars().all()
@@ -125,6 +125,15 @@ class NotionMysql:
         with self.session_factory() as session:
             query = (
                 select(TagOrm)
+            )
+            result = session.execute(query)
+            return result.scalars().all()
+        
+    def get_collections_by_tag_id(self, tag_id: int) -> list[NotionCollectionOrm]:
+        with self.session_factory() as session:
+            query = (
+                select(NotionCollectionOrm)
+                .where(NotionCollectionOrm.tag_id == tag_id)
             )
             result = session.execute(query)
             return result.scalars().all()

@@ -32,8 +32,7 @@
                             <i class="fas fa-plus"></i>
                         </button>
                     </div>
-                    <div class="spoiler-content">
-                    </div>
+                    <div class="spoiler-content"></div>
                 </div>
 
                 <div class="nav-section collections-section">
@@ -45,8 +44,7 @@
                             <i class="fas fa-plus"></i>
                         </button>
                     </div>
-                    <ul class="spoiler-content collection-list">
-                    </ul>
+                    <ul class="spoiler-content collection-list"></ul>
                 </div>
             </div>
 
@@ -55,7 +53,7 @@
                     <h2 id="collection-name-display">Select a Collection</h2>
                     <input type="text" id="collection-name-input" class="collection-name-input" value="Select a Collection" style="display: none;">
                     <div class="collection-meta">
-                        <span id="tag-meta-span"><i class="fas fa-tags"></i> No collection selected</span>
+                        <span id="tag-meta-span">No collection selected</span>
                         <select id="collection-tag-select" style="display: none;"></select>
                     </div>
                 </div>
@@ -70,8 +68,8 @@
             <div class="integration-header">
                 <div class="chat-toggle-group">
                     <div class="chat-toggle-icons">
-                        <button class="chat-icon telegram-icon"><i class="fab fa-telegram-plane"></i></button>
-                        <button class="chat-icon vk-icon"><i class="fab fa-vk"></i></button>
+                        <button class="chat-icon telegram-icon">Telegram</button>
+                        <button class="chat-icon vk-icon">VK</button>
                     </div>
                     <button class="chat-toggle-btn">
                         <i class="fas fa-plug"></i>
@@ -98,7 +96,7 @@
 
             <div class="integration-footer">
                 <input type="text" placeholder="Reply to chat...">
-                <button><i class="fas fa-paper-plane"></i></button>
+                <button>Send</button>
             </div>
         </div>
 
@@ -114,16 +112,24 @@
             </div>
 
             <div class="llm-page">
-                <div class="llm-message user-msg">Select a collection to start chatting with context</div>
-                <div class="llm-message assistant-msg">I can help you summarize or answer questions about your collections. First, select a collection from the left panel.</div>
+                <div class="llm-message user-msg">Выберите коллекцию, чтобы начать общение с контекстом</div>
+                <div class="llm-message assistant-msg">Я могу помочь суммировать или отвечать на вопросы по вашим коллекциям. Сначала выберите коллекцию слева.</div>
             </div>
 
             <div class="llm-footer">
-                <input type="text" placeholder="Ask the LLM or add context...">
-                <button><i class="fas fa-paper-plane"></i></button>
+                <div class="context-tags-container"></div>
+
+                <div class="llm-input-wrapper">
+                    <button class="context-add-btn" title="Добавить контекст">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                    <input type="text" class="llm-input" placeholder="Спросить LLM или добавить контекст...">
+                    <button class="send-message-btn" title="Отправить">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
-
 </body>
 </html>

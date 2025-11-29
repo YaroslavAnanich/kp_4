@@ -1,10 +1,11 @@
+import os
 from typing import List, Dict
 from openai import OpenAI
 from src.core.utils.file_util import FileUtil
 from src.llm.models import RequestResponseOrm, LlmChatOrm
 from src.llm.mysql import LlmMysql
 from src.llm.schemes import AddNotionContextScheme
-from src.notion.models import CollectionOrm
+from src.notion.models import NotionCollectionOrm
 from src.core.database import engine, session_factory
 
 
@@ -13,7 +14,7 @@ class LlmService:
         self.mysql = LlmMysql(engine=engine, session_factory=session_factory)
         self.file_util = FileUtil()
         self.client = OpenAI(base_url="https://openrouter.ai/api/v1",
-                             api_key="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")
+                             api_key=os.getenv("OP_KEY"),)
 
 
 
@@ -30,11 +31,14 @@ class LlmService:
     def get_chat_history(self, chat_id: int) -> list[RequestResponseOrm]:
         return self.mysql.get_all_request_responses_by_chat_id(chat_id=chat_id)
 
-    def add_collection_context_to_chat(self, chat_id, notion_ids) -> list[int]:
-        return self.mysql.add_chat_collections_by_qdrant_ids(chat_id=chat_id, qdrant_collection_ids=notion_ids)
+    def add_collection_context_to_chat(self, chat_id, collection_id) -> list[int]:
+        return self.mysql.add_chat_collection_by_qdrant_id(chat_id=chat_id, qdrant_collection_id=collection_id)
 
-    def get_collection_context_from_chat(self, chat_id: int) -> list[CollectionOrm]:
+    def get_collection_context_from_chat(self, chat_id: int) -> list[NotionCollectionOrm]:
         return self.mysql.get_qdrant_collections_by_chat_id(chat_id=chat_id)
+    
+    def delete_collection_context_from_chat(self, chat_id: int, qdrant_collection_id: int) -> bool:
+         return self.mysql.delete_chat_collection(chat_id=chat_id, qdrant_collection_id=qdrant_collection_id)
 
     def search_in_llm(self, request: str, chat_id: int, qdrant_context: str) -> Dict:
         chat_history = self.get_chat_history(chat_id=chat_id)
@@ -45,7 +49,7 @@ class LlmService:
         completion = self.client.chat.completions.create(
             extra_headers={},
             extra_body={},
-            model="meta-llama/llama-4-maverick:free",
+            model="nvidia/nemotron-nano-9b-v2:free",
             messages=[
                 {
                     "role": "user",
@@ -71,14 +75,8 @@ class LlmService:
             ]
         )
         response = completion.choices[0].message.content
-
-
-        self.mysql.add_request_response(chat_id=chat_id, request_content=request, response_content=response)
-
-        return {
-            "request": request,
-            "response": response
-        }
+        return response
+    
 
     @staticmethod
     def _get_text_from_chat(chat_messages: list[RequestResponseOrm]) -> List[str]:

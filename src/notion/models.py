@@ -5,7 +5,7 @@ from src.core.database import Base
 
 
 
-class CollectionOrm(Base):
+class NotionCollectionOrm(Base):
     __tablename__ = "qdrant_collection"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

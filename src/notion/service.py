@@ -3,7 +3,7 @@ from uuid import UUID
 
 from src.core.database import engine, session_factory
 from src.core.utils.file_util import FileUtil
-from src.notion.models import CollectionOrm, TagOrm
+from src.notion.models import NotionCollectionOrm, TagOrm
 from src.notion.mysql import NotionMysql
 from src.notion.qdrant import NotionQdrant
 from src.notion.schemes import AnyBlock
@@ -18,7 +18,7 @@ class NotionService:
         self.file_util = FileUtil()
 
 
-    async def create_collection(self, name: str) -> CollectionOrm:
+    async def create_collection(self, name: str) -> NotionCollectionOrm:
         qdrant_collection_name = await self.qdrant.create_collection()
         return self.mysql.add_collection(qdrant_collection_name=qdrant_collection_name, name=name)
 
@@ -36,7 +36,7 @@ class NotionService:
     async def update_collection_order_list(self, collection_id: int, order_list: list[int]) -> None:
         return self.mysql.update_collection_order_list_by_id(collection_id=collection_id, order_list=order_list)
 
-    async def get_all_collections(self) -> list[CollectionOrm]:
+    async def get_all_collections(self) -> list[NotionCollectionOrm]:
         return self.mysql.get_all_collections()
 
     async def create_tag(self,name: str) -> TagOrm:
@@ -77,9 +77,9 @@ class NotionService:
         return {"content": sorted_blocks, "order_list": collection.order_list}
 
 
-    async def search_in_notion(self, query_text: str, collection_names: List[str], limit: int = 10) -> str:
+    async def search_in_notion(self, query_text: str, collection_names: List[str], limit: int = 500):
         """
-        Возвращает только чистый текстовый контекст без метаданных.
+        Возвращает чистый текстовый контекст без метаданных и список документов.
         """
         search_results = await self.qdrant.search_blocks(
             query_text=query_text,
@@ -88,15 +88,38 @@ class NotionService:
         )
 
         text_chunks = []
+        documents = []
 
         for result in search_results:
             try:
                 block = self.qdrant.payload_to_pydantic(result['payload'])
                 text_content = self.qdrant.extract_text_content(block).strip()
+                
+                # Проверяем, является ли блок документом
+                if hasattr(block, 'media_type') and getattr(block, 'media_type') == 'document':
+                    document_info = {}
+                    
+                    # Сохраняем file_name если есть
+                    if hasattr(block, 'file_name') and getattr(block, 'file_name'):
+                        document_info['file_name'] = getattr(block, 'file_name')
+                    
+                    # Сохраняем file_path если есть
+                    if hasattr(block, 'file_path') and getattr(block, 'file_path'):
+                        document_info['file_path'] = getattr(block, 'file_path')
+                    
+                    
+                    # Добавляем информацию о документе в список
+                    if document_info:  # только если есть хотя бы одно поле
+                        documents.append(document_info)
+                
+                # Добавляем текстовый контент в общий список (для всех блоков)
                 if text_content:
                     text_chunks.append(text_content)
+                    
             except Exception:
                 continue
 
-        # Ограничиваем общее количество чанков
-        return "\n\n".join(text_chunks[:limit]) if text_chunks else "Не найдено релевантной информации."
+        # Ограничиваем общее количество текстовых чанков
+        text_context = "\n\n".join(text_chunks[:limit]) if text_chunks else "Не найдено релевантной информации."
+        
+        return text_context, documents

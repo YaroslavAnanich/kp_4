@@ -1,3 +1,4 @@
+import re
 import uuid
 import os
 from typing import BinaryIO, Optional
@@ -23,8 +24,9 @@ class FileUtil:
 
     @staticmethod
     def get_file_text(file_path: str) -> str:
+        server_path = re.search(r'/(var/files/.*)', file_path).group(1)
         try:
-            elements = partition(file_path)
+            elements = partition(server_path)
             text = "\n".join([str(el) for el in elements])
             return text
         except Exception as e:
