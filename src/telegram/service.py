@@ -1,6 +1,7 @@
 # src/telegram/service.py
 import io
 import base64
+import os
 from typing import BinaryIO, List, Optional, Dict
 
 from telethon import TelegramClient, events
@@ -289,6 +290,8 @@ class TelegramService:
                 else:
                     media_type = MediaType.DOCUMENT
 
+                # Сначала определяем тип медиа
+                is_gif = False
                 for attr in document.attributes:
                     attr_name = type(attr).__name__
                     if 'Audio' in attr_name:
@@ -297,15 +300,24 @@ class TelegramService:
                         media_type = MediaType.PHOTO
                     elif 'Animated' in attr_name or 'Gif' in attr_name:
                         media_type = MediaType.PHOTO
+                        is_gif = True
 
+                # Затем обрабатываем имя файла
                 for attr in document.attributes:
                     if hasattr(attr, 'file_name') and attr.file_name:
                         file_name = attr.file_name
+                        # Если это GIF, исправляем расширение
+                        if is_gif and file_name.endswith('.mp4'):
+                            file_name = file_name[:-4] + '.gif'
+                        elif is_gif and not file_name.endswith('.gif'):
+                            file_name += '.gif'
                         break
-                    else:
-                        file_name = "unknown_file"
+                else:
+                    file_name = "unknown_file"
 
         return {"media_type": media_type, "file_name": file_name}
+    
+    
 
     async def _download_file_by_message_id(self, telegram_chat_id: int, message_id: int) -> Optional[io.BytesIO]:
         if not self.client.is_connected():
@@ -321,10 +333,117 @@ class TelegramService:
             return None
         try:
             data = await self.client.download_media(message.media, file=bytes)
+            if not data:
+                return None
+            
+            # Проверяем, является ли медиа GIF'ом
+            is_gif = False
+            if hasattr(message.media, 'document'):
+                if hasattr(message.media.document, 'attributes'):
+                    for attr in message.media.document.attributes:
+                        attr_name = str(attr.__class__.__name__)
+                        if 'Animated' in attr_name or 'Gif' in attr_name:
+                            is_gif = True
+                            break
+            
+            # Если это GIF, конвертируем в правильный формат
+            if is_gif:
+                data = await self._convert_to_gif_bytes(data)
+            
             return base64.b64encode(data).decode("utf-8") if data else None
-        except Exception:
+        except Exception as e:
+            print(f"Error downloading media: {e}")
             return None
 
+    async def _convert_to_gif_bytes(self, video_bytes: bytes) -> bytes:
+        """
+        Конвертирует видео-байты в GIF байты.
+        """
+        try:
+            import asyncio
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(
+                None, 
+                self._mp4_to_gif_bytes_opencv, 
+                video_bytes
+            )
+        except Exception as e:
+            print(f"Error converting to GIF: {e}")
+            return video_bytes  # Возвращаем оригинальные байты в случае ошибки
+
+    def _mp4_to_gif_bytes_opencv(self, mp4_bytes: bytes, fps: int = 10, max_frames: int = 50, scale: float = 0.5) -> bytes:
+        """
+        Конвертация MP4 в GIF с использованием OpenCV.
+        """
+        try:
+            import cv2
+            import numpy as np
+            from PIL import Image
+            import io
+            import tempfile
+            import os
+            
+            # Создаем временный MP4 файл
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as temp_mp4:
+                temp_mp4.write(mp4_bytes)
+                temp_mp4_path = temp_mp4.name
+            
+            try:
+                # Читаем видео с помощью OpenCV
+                cap = cv2.VideoCapture(temp_mp4_path)
+                if not cap.isOpened():
+                    return mp4_bytes
+                
+                frames = []
+                frame_count = 0
+                
+                while frame_count < max_frames:
+                    ret, frame = cap.read()
+                    if not ret:
+                        break
+                    
+                    # Конвертируем BGR (OpenCV) в RGB (Pillow)
+                    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    pil_image = Image.fromarray(frame_rgb)
+                    
+                    # Уменьшаем размер для оптимизации
+                    if scale != 1.0:
+                        new_width = int(pil_image.width * scale)
+                        new_height = int(pil_image.height * scale)
+                        pil_image = pil_image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                    
+                    frames.append(pil_image)
+                    frame_count += 1
+                
+                cap.release()
+                
+                # Сохраняем в GIF
+                if frames:
+                    gif_buffer = io.BytesIO()
+                    frames[0].save(
+                        gif_buffer,
+                        format='GIF',
+                        save_all=True,
+                        append_images=frames[1:],
+                        duration=1000 // fps,
+                        loop=0,
+                        optimize=True
+                    )
+                    return gif_buffer.getvalue()
+                else:
+                    return mp4_bytes
+                    
+            finally:
+                # Удаляем временный файл
+                try:
+                    os.unlink(temp_mp4_path)
+                except:
+                    pass
+                    
+        except Exception as e:
+            print(f"Error in OpenCV GIF conversion: {e}")
+            return mp4_bytes
+    
     async def _get_file_name_for_message(self, telegram_chat_id: int, message_id: int) -> str:
         if not self.client.is_connected():
             await self.client.connect()

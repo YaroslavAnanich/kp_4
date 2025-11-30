@@ -364,3 +364,22 @@
 .message.outgoing .link-preview:hover {
     background-color: rgba(255, 255, 255, 0.3);
 }
+
+.message {
+    user-select: none; /* можно оставить, drag всё равно работает */
+    -webkit-user-drag: element;
+}
+
+.message.tg-dragging {
+    opacity: 0.5;
+    transform: scale(0.96);
+    transition: all 0.15s ease;
+    cursor: grabbing !important;
+}
+
+.block-wrapper.tg-drop-target {
+    background: rgba(217, 185, 129, 0.15) !important;
+    outline: 3px dashed #d9b981;
+    outline-offset: -3px;
+    border-radius: 6px;
+}

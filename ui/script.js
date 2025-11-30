@@ -4,6 +4,7 @@ import { TelegramViewer } from "./telegram/scripts/telegram_viewer.js";
 import { TelegramExplorer } from "./telegram/scripts/telegram_explorer.js";
 import { LlmExplorer } from "./llm/scripts/llm_explorer.js";
 import { LlmViewer } from "./llm/scripts/llm_viewer.js";
+import { TelegramDropManager } from './telegram/scripts/TelegramDropManager.js'
 
 const API_BASE_URL = 'http://localhost:8000';
 
@@ -25,4 +26,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.llmExplorer = llmExplorer;
     window.llmViewer = llmViewer;
+
+    const telegramDropManager = new TelegramDropManager(
+        telegramViewer,
+        collectionViewer,
+        API_BASE_URL
+    );
+
+    window.telegramDropManager = telegramDropManager;
 });

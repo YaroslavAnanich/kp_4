@@ -18,7 +18,7 @@ class FileUtil:
 
         with open(file_path, "wb") as f:
             f.write(file.read())
-
+        print(f"name = {name}, extension = {extension}")
         return name, f"http://127.0.0.1:8080/var/{path}/{filename}{extension}"
     
 
