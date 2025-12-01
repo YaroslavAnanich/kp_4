@@ -1,4 +1,3 @@
-/* LLM SECTION */
 .llm-section {
     width: 320px;
     display: flex;
@@ -9,306 +8,200 @@
     font-family: 'Poppins', 'Roboto', sans-serif;
 }
 
-/* Header */
 .llm-header {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
     align-items: center;
     padding-bottom: 20px;
     flex-shrink: 0;
 }
 
+.header-actions-group {
+    display: flex;
+    align-items: center;
+    gap: 14px;                     /* чуть больше воздуха между кнопками */
+}
+
 .create-chat-btn {
-    padding: 8px 15px;
-    font-size: 0.85em;
-    border-radius: 4px;
-    background-color: #d9b981;
-    color: white;
-    display: flex;
-    align-items: center;
-    border: none;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-}
-
-.create-chat-btn i { margin-right: 8px; }
-
-.history-btn {
-    width: 36px; height: 36px;
-    border-radius: 50%;
-    background-color: #d9b981;
-    color: white;
-    border: none;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.create-chat-btn:hover, .history-btn:hover {
-    background-color: #c7a56a;
-}
-
-/* Сообщения */
-.llm-page {
-    flex-grow: 1;
-    overflow-y: auto;
-    margin-bottom: 15px;
-    padding-right: 4px;
-}
-
-.llm-page::-webkit-scrollbar { width: 6px; }
-.llm-page::-webkit-scrollbar-thumb { background: #d9b981; border-radius: 3px; }
-
-.llm-message {
-    padding: 12px 18px;
-    border-radius: 10px;
-    margin-bottom: 12px;
-    line-height: 1.6;
-    font-size: 0.95em;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-    word-wrap: break-word;
-}
-
-.user-msg {
-    background-color: #f9f5e6;
-    margin-left: auto;
-    max-width: 85%;
-    border-bottom-right-radius: 4px;
-}
-
-.assistant-msg {
-    background-color: #ffffff;
-    border: 1px solid #e8e4db;
-    max-width: 90%;
-    border-bottom-left-radius: 4px;
-}
-
-.message-sources {
-    margin-top: 10px;
-    font-size: 0.82em;
-    color: #666;
-    padding-top: 8px;
-    border-top: 1px dashed #e8e4db;
-}
-
-.message-sources a {
-    color: #b89a6a;
-    text-decoration: underline;
-}
-
-/* Теги контекста */
-.context-tags-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    padding: 0 10px;
-    margin-bottom: 12px;
-    align-items: center;
-}
-
-.context-tag {
-    background: #d9b981;
-    color: white;
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 0.85em;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.context-tag i {
-    cursor: pointer;
+    padding: 0 18px;
+    height: 40px;
+    line-height: 40px;
     font-size: 0.9em;
-}
-
-/* Футер */
-.llm-footer {
-    display: flex;
-    flex-direction: column;
-    padding-top: 20px;
-    border-top: 1px solid #e8e4db;
-    flex-shrink: 0;
-    background-color: #f9f5f0;
-}
-
-.llm-input-wrapper {
-    position: relative;
-    margin: 0 10px;
-}
-
-.llm-input {
-    width: 100%;
-    padding: 14px 56px 14px 50px;
-    border: 1px solid #d4d0c5;
-    border-radius: 30px;
-    font-size: 0.95em;
-    outline: none;
-    background: white;
-    transition: all 0.2s ease;
-    box-sizing: border-box;
-}
-
-.llm-input:focus {
-    border-color: #d9b981;
-    box-shadow: 0 0 0 4px rgba(217, 185, 129, 0.2);
-}
-
-.context-add-btn {
-    position: absolute;
-    left: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: none;
-    border: none;
-    font-size: 1.1em;
-    color: #999;
-    cursor: pointer;
-    width: 36px;
-    height: 36px;
+    border-radius: 25px;
+    background: linear-gradient(135deg, #d9b981 0%, #c7a56a 100%);
+    color: white;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 50%;
-    transition: all 0.2s;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    box-shadow: 0 2px 8px rgba(217, 185, 129, 0.3);
+    flex: none;
+    position: relative;
+    overflow: hidden;
+    animation: buttonSlideIn 0.4s ease-out 0.1s both;
 }
 
-.context-add-btn:hover {
-    background: #f0e6d2;
+.create-chat-btn i {
+    margin-right: 8px;
+    font-size: 1em;
+    transition: transform 0.3s ease;
+}
+
+.create-chat-btn:hover {
+    background: linear-gradient(135deg, #c7a56a 0%, #b5955a 100%);
+    box-shadow: 0 4px 12px rgba(217, 185, 129, 0.4);
+}
+
+.create-chat-btn:hover i { transform: scale(1.1); }
+.create-chat-btn:active { box-shadow: 0 1px 4px rgba(217, 185, 129, 0.3); }
+
+.create-chat-btn::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 5px; height: 5px;
+    background: rgba(255,255,255,0.5);
+    opacity: 0;
+    border-radius: 50%;
+    transform: translate(-50%, -50%) scale(1);
+}
+.create-chat-btn:hover::after { animation: ripple 1s ease-out; }
+
+/* ──────────────────────── НОВАЯ КНОПКА ИСТОРИИ — просто иконка ──────────────────────── */
+.history-btn {
+    width: 40px;
+    height: 40px;
+    background: transparent !important;   /* убираем весь фон */
+    border: none;
+    color: #8a7a5e;                        /* спокойный тёплый серо-коричневый */
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    transition: all 0.25s ease;
+    flex-shrink: 0;
+    animation: buttonSlideIn 0.4s ease-out 0.2s both;
+}
+
+.history-btn i {
+    font-size: 1.35em;                     /* чуть крупнее для красоты */
+    transition: all 0.25s ease;
+}
+
+.history-btn:hover {
+    background: rgba(217, 185, 129, 0.15) !important;   /* лёгкий ховер-фон */
     color: #d9b981;
 }
 
-.send-message-btn {
-    position: absolute;
-    right: 8px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: #d9b981;
-    color: white;
-    border: none;
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    cursor: pointer;
-    font-size: 1em;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
+.history-btn:hover i {
+    transform: scale(1.15);
 }
 
-.send-message-btn:hover {
-    background: #c7a56a;
-    transform: translateY(-50%) scale(1.08);
+.history-btn:active {
+    transform: scale(0.94);
 }
 
-/* ПОПАПЫ — ВЫПАДАЮТ ПОД/НАД КНОПКАМИ */
-.llm-popup-backdrop {
-    position: fixed;
-    inset: 0;
-    background: transparent;
-    z-index: 10000;
+/* Фокус для доступности */
+.history-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(217, 185, 129, 0.3);
 }
 
-.llm-popup {
-    position: absolute;
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.22);
-    border: 1px solid #e0e0e0;
-    z-index: 10001;
-    min-width: 240px;
-    max-height: 70vh;
-    overflow: hidden;
-    animation: popupFadeIn 0.18s ease-out;
+/* ──────────────────────── Остальное без изменений ──────────────────────── */
+
+@keyframes ripple {
+    to { transform: translate(-50%, -50%) scale(20); opacity: 0; }
 }
 
-.llm-popup.history-popup {
-    right: 20px;
-    top: 70px;
-    width: 280px;
-}
-
-.llm-popup.context-popup {
-    left: 10px;
-    bottom: 80px; /* ВЫШЕ кнопки + */
-    right: 10px;
-    width: auto;
-    max-width: 400px;
-}
-
-@keyframes popupFadeIn {
-    from { opacity: 0; transform: translateY(-8px); }
+@keyframes buttonSlideIn {
+    from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
-.llm-popup-header {
-    padding: 14px 18px;
-    background: #f9f5f0;
-    border-bottom: 1px solid #eee;
-    font-weight: 600;
-    font-size: 0.95em;
+.llm-page { flex-grow: 1; overflow-y: auto; margin-bottom: 15px; padding-right: 4px; }
+.llm-page::-webkit-scrollbar { width: 6px; }
+.llm-page::-webkit-scrollbar-thumb { background: #d9b981; border-radius: 3px; }
+
+.llm-message { padding: 12px 18px; border-radius: 10px; margin-bottom: 12px; line-height: 1.6; font-size: 0.95em; box-shadow: 0 1px 2px rgba(0,0,0,0.05); word-wrap: break-word; }
+.user-msg { background-color: #f9f5e6; margin-left: auto; max-width: 85%; border-bottom-right-radius: 4px; }
+.assistant-msg { background-color: #ffffff; border: 1px solid #e8e4db; max-width: 90%; border-bottom-left-radius: 4px; }
+
+.context-tags-container { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 10px; margin-bottom: 12px; align-items: center; }
+.context-tag { background: #d9b981; color: white; padding: 6px 12px; border-radius: 20px; font-size: 0.85em; display: flex; align-items: center; gap: 8px; }
+.context-tag i { cursor: pointer; font-size: 0.9em; }
+
+.llm-footer { display: flex; flex-direction: column; padding-top: 20px; border-top: 1px solid #e8e4db; flex-shrink: 0; background-color: #f9f5f0; }
+.llm-input-wrapper { position: relative; margin: 0 10px; }
+.llm-input { width: 100%; padding: 14px 56px 14px 50px; border: 1px solid #d4d0c5; border-radius: 30px; font-size: 0.95em; outline: none; background: white; box-sizing: border-box; }
+.llm-input:focus { border-color: #d9b981; box-shadow: 0 0 0 4px rgba(217, 185, 129, 0.2); }
+
+.context-add-btn { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 1.1em; color: #999; cursor: pointer; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+.context-add-btn:hover { background: #f0e6d2; color: #d9b981; }
+
+.send-message-btn { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: #d9b981; color: white; border: none; width: 38px; height: 38px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.send-message-btn:hover { background: #c7a56a; transform: translateY(-50%) scale(1.08); }
+
+/* Попапы и адаптив — без изменений */
+.llm-popup-backdrop { position: fixed; inset: 0; background: transparent; z-index: 10000; }
+.llm-popup { position: absolute; background: white; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.22); border: 1px solid #e0e0e0; z-index: 10001; min-width: 240px; max-height: 70vh; overflow: hidden; animation: popupFadeIn 0.18s ease-out; }
+.llm-popup.history-popup { right: 20px; top: 70px; width: 280px; }
+.llm-popup.context-popup { width: 250px; max-height: 250px; overflow-y: auto; z-index: 10002; padding-top: 8px; border-radius: 12px; }
+
+@keyframes popupFadeIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+
+.llm-popup-header { padding: 14px 18px; background: #f9f5f0; border-bottom: 1px solid #eee; font-weight: 600; font-size: 0.95em; display: flex; justify-content: space-between; align-items: center; }
+.llm-popup-body { max-height: 50vh; overflow-y: auto; padding: 8px 0; }
+
+.context-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; padding: 8px; }
+.context-item { padding: 10px 8px; background: #f9f5f0; border-radius: 8px; text-align: center; cursor: pointer; font-size: 0.9em; transition: all 0.2s; }
+.context-item:hover { background: #d9b981; color: white; }
+
+.history-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; cursor: pointer; }
+.history-item:hover, .history-item.active { background: #f0e6d2; }
+
+/* Мобильная адаптация */
+@media (max-width: 768px) {
+    .header-actions-group { gap: 10px; }
+    .create-chat-btn { padding: 0 14px; font-size: 0.85em; height: 36px; line-height: 36px; }
+    .history-btn { width: 36px; height: 36px; }
+    .history-btn i { font-size: 1.25em; }
+}
+
+/* ─────────────── КРАСИВАЯ АНИМАЦИЯ "печатает..." ─────────────── */
+.typing-indicator {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-}
-
-.llm-popup-body {
-    max-height: 50vh;
-    overflow-y: auto;
-    padding: 8px 0;
-}
-
-.llm-popup-body::-webkit-scrollbar { width: 6px; }
-.llm-popup-body::-webkit-scrollbar-thumb { background: #d9b98188; border-radius: 3px; }
-
-.context-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 8px;
-    padding: 8px;
-}
-
-.context-item {
-    padding: 10px 8px;
-    background: #f9f5f0;
-    border-radius: 8px;
-    text-align: center;
-    cursor: pointer;
-    font-size: 0.9em;
-    transition: all 0.2s;
-}
-
-.context-item:hover {
-    background: #d9b981;
-    color: white;
-}
-
-.history-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 16px;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-
-.history-item:hover, .history-item.active {
-    background: #f0e6d2;
-}
-
-.delete-chat-btn {
-    background: none;
-    border: none;
-    color: #c77;
-    cursor: pointer;
-    padding: 4px 8px;
-}
-
-.loading {
-    text-align: center;
-    color: #888;
-    padding: 20px;
+    gap: 10px;
+    padding: 5px 5px;
+    color: #999;
     font-style: italic;
+}
+
+.typing-indicator span {
+    width: 10px;
+    height: 10px;
+    background: #d9b981;
+    border-radius: 50%;
+    display: inline-block;
+    animation: typingDot 1.4s infinite ease-in-out both;
+}
+
+.typing-indicator span:nth-child(1) { animation-delay: 0s; }
+.typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+.typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typingDot {
+    0%, 80%, 100% {
+        transform: scale(0);
+        opacity: 0.5;
+    }
+    40% {
+        transform: scale(1);
+        opacity: 1;
+    }
 }

@@ -1,6 +1,5 @@
-/* INTEGRATION SECTION */
 .integration-section {
-    width: 600px; /* ИСПРАВЛЕНИЕ: Ширина установлена на строго фиксированную 600px */
+    width: 600px;
     display: flex;
     flex-direction: column;
     border-left: 1px solid #e8e4db;
@@ -8,7 +7,6 @@
     background-color: #fdfbf7;
 }
 
-/* Integration Header */
 .integration-header {
     height: 55px;
     flex-shrink: 0;
@@ -20,78 +18,33 @@
     align-items: center;
 }
 
-.chat-toggle-group {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-}
-
-.chat-toggle-icons {
-    display: flex;
-}
-
-.chat-icon {
-    background: none;
-    border: none;
-    font-size: 1.2em;
-    margin-right: 0;
-    cursor: pointer;
-    padding: 6px;
-    border-radius: 50%;
-    transition: background-color 0.2s ease;
-}
-
-.chat-icon:hover {
-    background-color: #f5f0e8;
-}
-
+.chat-toggle-group { display: flex; align-items: center; gap: 15px; }
+.chat-toggle-icons { display: flex; }
+.chat-icon { background: none; border: none; font-size: 1.2em; cursor: pointer; padding: 6px; border-radius: 50%; transition: background-color 0.2s ease; }
+.chat-icon:hover { background-color: #f5f0e8; }
 .telegram-icon { color: #8a6d4b; }
 .vk-icon { color: #7a7051; }
-
 .chat-toggle-btn {
     background-color: #f5f0e8;
     border: 1px solid #e8e4db;
     font-size: 0.9em;
     cursor: pointer;
     color: #4a413a;
-    transition: background-color 0.2s ease;
-    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: 500;
-    width: 40px;
-    height: 40px;
-    padding: 0;
-    border-radius: 50%;
+    transition: background-color 0.2s ease;
 }
+.chat-toggle-btn:hover { background-color: #e8e4db; }
 
-.chat-toggle-btn:hover {
-    background-color: #e8e4db;
-}
-
-.chat-toggle-btn i {
-    margin: 0;
-}
-
-/* Integration Content (Контейнер для сообщений и сайдбара с чатами) */
-.integration-content {
-    flex-grow: 1;
-    display: flex;
-    overflow: hidden;
-}
-
-/* Integration Page (Область сообщений, слева) */
-.integration-page {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    /* ИСПРАВЛЕНИЕ: Предотвращаем растягивание по ширине из-за очень длинного контента */
-    min-width: 0; 
-}
+.integration-content { flex-grow: 1; display: flex; overflow: hidden; }
+.integration-page { flex-grow: 1; display: flex; flex-direction: column; min-width: 0; }
 
 .chat-messages {
-    /* flex-grow: 1 и overflow-y: auto уже установлены и это правильно */
     flex-grow: 1;
     padding: 20px;
     overflow-y: auto;
@@ -109,41 +62,46 @@
     box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
 
-.incoming {
-    background-color: #f5e7c8;
-    align-self: flex-start;
+.incoming  { background-color: #f5e7c8; align-self: flex-start; }
+.outgoing  { background-color: #d9b981; color: white; align-self: flex-end; margin-left: auto; }
+
+.message.photo-only {
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 4px 8px !important;
+    margin-bottom: 12px !important;
+    max-width: none;
 }
 
-.outgoing {
-    background-color: #d9b981;
-    color: white;
-    align-self: flex-end;
-    margin-left: auto;
+.message.photo-only.incoming { align-self: flex-start; }
+.message.photo-only.outgoing { align-self: flex-end; }
+
+.message.photo-only .media-photo {
+    max-width: 380px;
+    max-height: 500px;
+    border-radius: 14px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    display: block;
 }
 
-/* Integration Sidebar (Список чатов, справа) */
+.message:not(.photo-only) .media-photo {
+    max-width: 300px;
+    max-height: 300px;
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
 .integration-sidebar {
     width: 180px;
     border-left: 1px solid #e8e4db;
     padding: 20px 15px;
     flex-shrink: 0;
     background-color: #fdfbf7;
-    /* ИСПРАВЛЕНИЕ: Добавлена прокрутка для списка чатов */
-    overflow-y: auto; 
+    overflow-y: auto;
 }
 
-.integration-sidebar h3 {
-    font-family: 'Poppins', sans-serif;
-    font-size: 1.15em;
-    font-weight: 500;
-    margin-bottom: 15px;
-    color: #4a413a;
-}
-
-.chat-list {
-    list-style: none;
-}
-
+.integration-sidebar h3 { font-family: 'Poppins', sans-serif; font-size: 1.15em; font-weight: 500; margin-bottom: 15px; color: #4a413a; }
+.chat-list { list-style: none; padding: 0; margin: 0; }
 .chat-item {
     padding: 10px 12px;
     cursor: pointer;
@@ -151,16 +109,10 @@
     color: #6c6258;
     border-radius: 4px;
     margin-bottom: 5px;
-    transition: background-color 0.2s ease, color 0.2s ease;
+    transition: all 0.2s ease;
 }
+.chat-item:hover, .chat-item.active { background-color: #f5e7c8; color: #4a413a; font-weight: 500; }
 
-.chat-item:hover, .chat-item.active {
-    background-color: #f5e7c8;
-    color: #4a413a;
-    font-weight: 500;
-}
-
-/* Integration Footer */
 .integration-footer {
     display: flex;
     padding: 15px 20px;
@@ -178,7 +130,7 @@
     margin-right: 10px;
     font-size: 0.95em;
     outline: none;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    transition: all 0.2s ease;
 }
 
 .integration-footer input:focus {
@@ -191,7 +143,6 @@
     color: white;
     border: none;
     border-radius: 50%;
-    padding: 8px;
     width: 36px;
     height: 36px;
     display: flex;
@@ -201,185 +152,49 @@
     font-size: 1em;
     transition: background-color 0.2s ease;
 }
+.integration-footer button:hover { background-color: #c7a56a; }
 
-.integration-footer button:hover {
-    background-color: #c7a56a;
-}
+.media-container { margin: 8px 0; max-width: 100%; }
+.media-photo { border-radius: 8px; }
+.media-audio { width: 100%; max-width: 300px; height: 40px; }
 
-
-/* Media containers */
-.media-container {
-    margin: 8px 0;
-    max-width: 100%;
-}
-
-.media-photo {
-    max-width: 300px;
-    max-height: 300px;
-    border-radius: 8px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-}
-
-.media-audio {
-    width: 100%;
-    max-width: 300px;
-    height: 40px;
-}
-
-.document-link {
+.document-link, .link-preview, .media-placeholder {
     display: flex;
     align-items: center;
     padding: 10px 15px;
-    background-color: #f8f9fa;
-    border: 1px solid #e9ecef;
     border-radius: 6px;
+    max-width: 300px;
     text-decoration: none;
-    color: #495057;
     transition: all 0.2s ease;
-    max-width: 300px;
 }
 
-.document-link:hover {
-    background-color: #e9ecef;
-    border-color: #dee2e6;
-    text-decoration: none;
-    color: #495057;
-}
+.document-link   { background: #f8f9fa; border: 1px solid #e9ecef; color: #495057; }
+.link-preview    { background: #f8f9fa; border: 1px solid #e9ecef; color: #007bff; }
+.media-placeholder { background: #f8f9fa; border: 1px dashed #dee2e6; color: #6c757d; }
 
-.document-link i {
-    margin-right: 8px;
-    color: #6c757d;
-}
-
-.document-link span {
-    flex: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.link-preview {
-    display: flex;
-    align-items: center;
-    padding: 8px 12px;
-    background-color: #f8f9fa;
-    border: 1px solid #e9ecef;
-    border-radius: 6px;
-    text-decoration: none;
-    color: #007bff;
-    transition: all 0.2s ease;
-    max-width: 300px;
-}
-
-.link-preview:hover {
-    background-color: #e3f2fd;
-    border-color: #007bff;
-    text-decoration: none;
-    color: #0056b3;
-}
-
-.link-preview i {
-    margin-right: 8px;
-}
-
-.link-preview span {
-    flex: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.media-placeholder {
-    display: flex;
-    align-items: center;
-    padding: 10px 15px;
-    background-color: #f8f9fa;
-    border: 1px dashed #dee2e6;
-    border-radius: 6px;
-    color: #6c757d;
-    max-width: 300px;
-}
-
-.media-placeholder i {
-    margin-right: 8px;
-    color: #6c757d;
-}
-
-.media-placeholder span {
-    flex: 1;
-    margin-right: 10px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
+.document-link:hover, .link-preview:hover { background: #e9ecef; }
 
 .download-btn {
-    background-color: #d9b981;
+    background: #d9b981;
     color: white;
     border: none;
     padding: 4px 8px;
     border-radius: 4px;
     cursor: pointer;
     font-size: 0.8em;
-    transition: background-color 0.2s ease;
 }
+.download-btn:hover { background: #c7a56a; }
 
-.download-btn:hover {
-    background-color: #c7a56a;
-}
+.message-text { margin-bottom: 8px; line-height: 1.4; word-wrap: break-word; }
 
-.download-btn i {
-    margin-right: 4px;
-}
-
-/* Message text styling */
-.message-text {
-    margin-bottom: 8px;
-    line-height: 1.4;
-    word-wrap: break-word;
-}
-
-/* Incoming message specific styles */
 .message.incoming .document-link,
 .message.incoming .link-preview,
-.message.incoming .media-placeholder {
-    background-color: #f5e7c8;
-    border-color: #e8d9b5;
-}
+.message.incoming .media-placeholder { background: #f5e7c8; border-color: #e8d9b5; }
 
-.message.incoming .document-link:hover,
-.message.incoming .link-preview:hover {
-    background-color: #f0dfb4;
-}
-
-/* Outgoing message specific styles */
 .message.outgoing .document-link,
 .message.outgoing .link-preview,
-.message.outgoing .media-placeholder {
-    background-color: rgba(255, 255, 255, 0.2);
-    border-color: rgba(255, 255, 255, 0.3);
-}
+.message.outgoing .media-placeholder { background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.3); }
 
-.message.outgoing .document-link:hover,
-.message.outgoing .link-preview:hover {
-    background-color: rgba(255, 255, 255, 0.3);
-}
-
-.message {
-    user-select: none; /* можно оставить, drag всё равно работает */
-    -webkit-user-drag: element;
-}
-
-.message.tg-dragging {
-    opacity: 0.5;
-    transform: scale(0.96);
-    transition: all 0.15s ease;
-    cursor: grabbing !important;
-}
-
-.block-wrapper.tg-drop-target {
-    background: rgba(217, 185, 129, 0.15) !important;
-    outline: 3px dashed #d9b981;
-    outline-offset: -3px;
-    border-radius: 6px;
-}
+.message { user-select: none; -webkit-user-drag: element; }
+.message.tg-dragging { opacity: 0.5; transform: scale(0.96); transition: all 0.15s ease; cursor: grabbing !important; }
+.block-wrapper.tg-drop-target { background: rgba(217, 185, 129, 0.15) !important; outline: 3px dashed #d9b981; outline-offset: -3px; border-radius: 6px; }

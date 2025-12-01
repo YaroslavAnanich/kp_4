@@ -1,257 +1,263 @@
-/* ui/notion/styles/style_viewer.css */
+/* ui/notion/styles/style_viewer.css — РАБОЧАЯ ВЕРСИЯ БЕЗ ОШИБОК */
 .notion-page {
-    /* flex-grow: 1 и overflow-y: auto уже установлены и это правильно */
     flex-grow: 1;
-    padding: 30px;
-    overflow-y: auto;
-    font-family: 'Roboto', sans-serif;
-    line-height: 1.6;
-    color: #37352f;
-    background-color: #ffffff;
+    padding:30px;
+    overflow-y:auto;
+    font-family:'Roboto',sans-serif;
+    line-height:1.6;
+    color:#37352f;
+    background-color:#ffffff;
 }
 
 .notion-page > *:not(.notion-header) {
-    max-width: 600px;
-    margin-left: auto;
-    margin-right: auto;
+    max-width:600px;
+    margin-left:auto;
+    margin-right:auto;
 }
 
 .block-wrapper {
-    position: relative;
-    margin: 3px 0;
-    padding: 0 5px;
-    min-height: 1.5em;
-    transition: background-color 0.2s ease, opacity 0.2s ease;
-    display: flex;
-    align-items: flex-start;
+    position:relative;
+    margin:3px 0;
+    padding:0 5px;
+    min-height:1.5em;
+    display:flex;
+    align-items:flex-start;
+    transition:background-color .2s, opacity .2s;
 }
 
-.block-wrapper:hover {
-    background-color: #f7f7f5;
-}
+.block-wrapper:hover { background-color:#f7f7f5; }
+.block-wrapper.dragging { opacity:0.4 !important; }
 
-.block-wrapper.dragging {
-    opacity: 0.4 !important;
-}
-
-
-/* ВОЗВРАЩАЕМ: стили для кнопки удаления */
 .delete-block-btn {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    left: -25px;
-    background: none;
-    border: none;
-    padding: 4px;
-    cursor: pointer;
-    color: #c0c0c0;
-    border-radius: 3px;
-    opacity: 0;
-    transition: opacity 0.2s ease, color 0.2s ease, left 0.2s ease;
-    font-size: 0.9em;
-    z-index: 10;
+    position:absolute;
+    top:50%;
+    transform:translateY(-50%);
+    left:-25px;
+    background:none;
+    border:none;
+    padding:4px;
+    cursor:pointer;
+    color:#c0c0c0;
+    border-radius:3px;
+    opacity:0;
+    transition:opacity .2s, color .2s, left .2s;
+    font-size:.9em;
+    z-index:10;
 }
 
 .block-wrapper:hover .delete-block-btn {
-    opacity: 1;
-    left: -35px;
+    opacity:1;
+    left:-35px;
 }
 
 .delete-block-btn:hover {
-    color: #e03c31;
-    background-color: #fff0f0;
+    color:#e03c31;
+    background:#fff0f0;
 }
 
-/* Стили для индикатора перетаскивания как в Notion */
 .drop-indicator {
-    position: absolute;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: #d9b981;
-    z-index: 1000;
-    border-radius: 2px;
-    pointer-events: none;
-    box-shadow: 0 0 0 2px rgba(217, 185, 129, 0.3);
+    position:absolute;
+    left:0;
+    right:0;
+    height:3px;
+    background:#d9b981;
+    z-index:1000;
+    border-radius:2px;
+    pointer-events:none;
+    box-shadow:0 0 0 2px rgba(217,185,129,.3);
 }
 
 .drop-indicator::before {
-    content: '';
-    position: absolute;
-    top: -3px;
-    left: 10px;
-    width: 8px;
-    height: 8px;
-    background: #d9b981;
-    border-radius: 50%;
-    box-shadow: 0 0 0 2px white;
+    content:'';
+    position:absolute;
+    top:-3px;
+    left:10px;
+    width:8px;
+    height:8px;
+    background:#d9b981;
+    border-radius:50%;
+    box-shadow:0 0 0 2px white;
 }
 
 .notion-block-editable {
-    flex-grow: 1;
-    min-width: 0;
-    word-wrap: break-word;
-    white-space: pre-wrap; /* ИСПРАВЛЕНИЕ: Гарантирует перенос текста при вводе */
-    overflow-wrap: break-word; /* Дополнительная гарантия переноса */
-    outline: none;
-    padding: 3px 2px;
-    border-radius: 3px;
-    cursor: text;
-    transition: background-color 0.1s ease;
+    flex-grow:1;
+    min-width:0;
+    word-wrap:break-word;
+    white-space:pre-wrap;
+    overflow-wrap:break-word;
+    outline:none;
+    padding:3px 2px;
+    border-radius:3px;
+    cursor:text;
+    transition:background-color .1s;
 }
 
 .notion-block-editable:focus {
-    background-color: #fefcfb;
-    box-shadow: 0 0 0 1px rgba(55, 53, 47, 0.1);
+    background:#fefcfb;
+    box-shadow:0 0 0 1px rgba(55,53,47,.1);
 }
 
-.block-wrapper h1, .block-wrapper h2, .block-wrapper h3,
-.block-wrapper h4, .block-wrapper h5, .block-wrapper h6 {
-    font-family: 'Poppins', sans-serif;
-    font-weight: 600;
-    line-height: 1.3;
-    margin: 18px 0 8px 0;
-    color: #312c26;
+.block-wrapper h1,
+.block-wrapper h2,
+.block-wrapper h3,
+.block-wrapper h4,
+.block-wrapper h5,
+.block-wrapper h6 {
+    font-family:'Poppins',sans-serif;
+    font-weight:600;
+    line-height:1.3;
+    margin:18px 0 8px;
+    color:#312c26;
 }
 
-.block-wrapper h1 { font-size: 2em; }
-.block-wrapper h2 { font-size: 1.5em; }
-.block-wrapper h3 { font-size: 1.25em; }
+.block-wrapper h1 { font-size:2em; }
+.block-wrapper h2 { font-size:1.5em; }
+.block-wrapper h3 { font-size:1.25em; }
 
 .notion-list-item {
-    display: flex;
-    align-items: flex-start;
-    margin: 4px 0;
+    display:flex;
+    align-items:flex-start;
+    margin:4px 0;
 }
 
 .notion-list-item.bulleted .list-marker::before {
-    content: "•";
-    margin-right: 8px;
-    color: #666;
-    font-size: 1.2em;
-}
-
-.notion-list-item.numbered .list-marker::before {
-    content: none;
+    content:"•";
+    margin-right:8px;
+    color:#666;
+    font-size:1.2em;
 }
 
 .notion-list-item.numbered .list-marker {
-    margin-right: 8px;
-    color: #666;
-    min-width: 20px;
-    text-align: right;
-}
-
-.notion-list-item.numbered {
-    counter-reset: none;
-}
-
-.notion-link-block {
-    pointer-events: none;
+    margin-right:8px;
+    color:#666;
+    min-width:20px;
+    text-align:right;
 }
 
 .notion-link-block a.link-display {
-    color: #d9b981;
-    text-decoration: underline;
-    cursor: pointer;
-    pointer-events: auto;
+    color:#d9b981;
+    text-decoration:underline;
+    pointer-events:auto;
+    cursor:pointer;
 }
 
 .link-editing {
-    width: 100%;
-    padding: 8px 12px;
-    border: 2px solid #d9b981;
-    border-radius: 6px;
-    background: #fffbe6;
-    font-size: inherit;
-    outline: none;
-    min-height: 1.5em;
-    
-    /* ИСПРАВЛЕНИЕ: фиксированная ширина для поля ввода ссылки */
-    max-width: 400px;
-    min-width: 200px;
-    box-sizing: border-box;
+    width:100%;
+    padding:8px 12px;
+    border:2px solid #d9b981;
+    border-radius:6px;
+    background:#fffbe6;
+    font-size:inherit;
+    outline:none;
+    min-height:1.5em;
+    max-width:400px;
+    min-width:200px;
+    box-sizing:border-box;
 }
 
 .table-container {
-    width: 100%;
-    margin: 12px 0;
-    /* ИСПРАВЛЕНИЕ: Добавляем горизонтальную прокрутку для широких таблиц */
-    overflow-x: auto; 
-    max-width: 100%;
+    overflow-x:auto;
+    margin:12px 0;
+    max-width:100%;
 }
 
 .notion-table {
-    border-collapse: separate;
-    border-spacing: 0;
-    width: 100%;
-    min-width: 500px;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    background: white;
+    border-collapse:separate;
+    border-spacing:0;
+    width:100%;
+    min-width:500px;
+    border:1px solid #e0e0e0;
+    border-radius:8px;
+    overflow:hidden;
+    box-shadow:0 1px 3px rgba(0,0,0,.1);
+    background:white;
 }
 
 .notion-table th,
 .notion-table td {
-    min-width: 140px;
-    height: 40px;
-    padding: 8px 12px;
-    border: 1px solid #e0e0e0;
-    text-align: left;
+    min-width:140px;
+    height:40px;
+    padding:8px 12px;
+    border:1px solid #e0e0e0;
+    text-align:left;
 }
 
-.notion-table th {
-    background: #f8f8f8;
-    font-weight: 600;
-}
+.notion-table th { background:#f8f8f8; font-weight:600; }
 
-.block-wrapper.table-focused .notion-table {
-    outline: 3px solid #d9b981;
-    outline-offset: 2px;
-    border-radius: 8px;
-}
-
+/* ====================== ФАЙЛЫ ====================== */
 .file-block-content {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #e8e4db;
-    border-radius: 6px;
-    background-color: #f9f9f5;
-    /* ИСПРАВЛЕНИЕ: Убираем центрирование (auto) для выравнивания по левому краю */
-    margin: 10px 0; 
-    max-width: 500px; 
+    all:unset;
+    display:block;
+    margin:16px 0;
 }
 
+/* Фото */
 .file-block-content img {
-    max-width: 100%;
-    height: auto;
-    max-height: 400px;
-    object-fit: contain;
-    border-radius: 4px;
-    margin-bottom: 10px;
+    max-width:100%;
+    width:auto;
+    max-width:720px;
+    height:auto;
+    border-radius:8px;
+    box-shadow:0 4px 16px rgba(0,0,0,.12);
+    background:transparent;
+    transition:box-shadow .25s, transform .25s;
+    display:block;
+    margin:0 auto;
 }
 
+.file-block-content img:hover {
+    box-shadow:0 12px 32px rgba(0,0,0,.18);
+    transform:translateY(-2px);
+}
+
+/* Аудио */
 .file-block-content audio {
-    width: 100%;
-    margin-bottom: 10px;
+    width:100%;
+    max-width:500px;
+    margin:8px auto;
+    display:block;
 }
 
-.file-block-content a {
-    color: #d9b981;
-    text-decoration: none;
-    font-weight: 500;
+/* Документы — все иконки одного цвета #d9b981 */
+.file-block-content .document-preview {
+    display:flex;
+    align-items:center;
+    gap:16px;
+    padding:15px 18px;
+    background:#faf9f7;
+    border:1px solid #e8e4db;
+    border-radius:12px;
+    max-width:540px;
+    margin:0 auto;
+    text-decoration:none;
+    transition:all .25s ease;
+    cursor:pointer;
 }
 
-.file-block-content a:hover {
-    text-decoration: underline;
+.file-block-content .document-preview:hover {
+    background:#f5f2ed;
+    border-color:#d9b981;
+    transform:translateY(-2px);
+    box-shadow:0 8px 25px rgba(0,0,0,.1);
 }
 
-.block-wrapper[data-block-type="file"]:focus-within {
-    box-shadow: 0 0 0 3px #d9b981;
-    border-radius: 6px;
+.file-block-content .document-preview .doc-icon {
+    font-size:36px;
+    color:#d9b981 !important;
+    flex-shrink:0;
+}
+
+.file-block-content .document-preview .doc-name {
+    font-weight:600;
+    color:#222;
+    font-size:15px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    margin-bottom:3px;
+}
+
+.file-block-content .document-preview .doc-size {
+    font-size:13px;
+    color:#777;
 }

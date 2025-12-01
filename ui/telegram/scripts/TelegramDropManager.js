@@ -10,10 +10,10 @@ export class TelegramDropManager {
     init() {
         const container = this.telegramViewer.messagesContainer;
 
-        // Делаем ВСЕ сообщения draggable (даже если внутри нет медиа)
+        // Делаем ВСЕ сообщения draggable
         const makeMessagesDraggable = () => {
             container.querySelectorAll('.message').forEach(msgEl => {
-                if (msgEl.hasAttribute('draggable')) return; // уже обработано
+                if (msgEl.hasAttribute('draggable')) return;
 
                 msgEl.draggable = true;
                 msgEl.style.cursor = 'grab';
@@ -23,10 +23,8 @@ export class TelegramDropManager {
                     const messageId = msgEl.dataset.messageId;
                     if (!messageId) return;
 
-                    // Подсветка
                     msgEl.classList.add('tg-dragging');
 
-                    // Передаём данные
                     e.dataTransfer.effectAllowed = 'copy';
                     e.dataTransfer.setData('application/x-tg-message', JSON.stringify({
                         chatId: this.telegramViewer.currentChatId,
@@ -53,61 +51,104 @@ export class TelegramDropManager {
             });
         };
 
-        // Запускаем сразу + после каждой подгрузки сообщений
         makeMessagesDraggable();
-
-        // Подписываемся на новую отрисовку сообщений
         const originalRenderMessages = this.telegramViewer.renderMessages.bind(this.telegramViewer);
         this.telegramViewer.renderMessages = (...args) => {
             originalRenderMessages(...args);
-            setTimeout(makeMessagesDraggable, 50); // небольшая задержка, чтобы DOM успел обновиться
+            setTimeout(makeMessagesDraggable, 50);
         };
 
-        // Приёмная зона — только пустые text-блоки в Notion
+        // === ИСПРАВЛЕННАЯ ЛОГИКА ПРИЁМА ПЕРЕТАСКИВАНИЯ ===
+        let currentDropTarget = null;
+
         this.collectionViewer.notionPage.addEventListener('dragover', (e) => {
             if (!e.dataTransfer.types.includes('application/x-tg-message')) return;
 
             const wrapper = e.target.closest('.block-wrapper[data-block-type="text"]');
-            if (!wrapper) return;
+            if (!wrapper) {
+                if (currentDropTarget) {
+                    currentDropTarget.classList.remove('tg-drop-target');
+                    currentDropTarget = null;
+                }
+                return;
+            }
 
             const editable = wrapper.querySelector('.notion-block-editable');
             if (!editable) return;
 
-            const text = editable.textContent || editable.innerText || '';
-            if (text.trim() !== '') return;
+            const text = (editable.textContent || editable.innerText || '').trim();
+            if (text !== '') return; // только пустые блоки
 
             e.preventDefault();
             e.dataTransfer.dropEffect = 'copy';
+
+            // Снимаем подсветку с предыдущего блока
+            if (currentDropTarget && currentDropTarget !== wrapper) {
+                currentDropTarget.classList.remove('tg-drop-target');
+            }
+
             wrapper.classList.add('tg-drop-target');
+            currentDropTarget = wrapper;
         });
 
+        // Снимаем подсветку только когда действительно вышли за пределы всей страницы
         this.collectionViewer.notionPage.addEventListener('dragleave', (e) => {
-            const wrapper = e.target.closest('.block-wrapper');
-            if (wrapper && !this.collectionViewer.notionPage.contains(e.relatedTarget)) {
-                wrapper.classList.remove('tg-drop-target');
+            if (!e.relatedTarget || !this.collectionViewer.notionPage.contains(e.relatedTarget)) {
+                if (currentDropTarget) {
+                    currentDropTarget.classList.remove('tg-drop-target');
+                    currentDropTarget = null;
+                }
             }
         });
 
         this.collectionViewer.notionPage.addEventListener('drop', async (e) => {
             e.preventDefault();
 
+            // Сбрасываем подсветку в любом случае
+            if (currentDropTarget) {
+                currentDropTarget.classList.remove('tg-drop-target');
+            }
+
             const wrapper = e.target.closest('.block-wrapper[data-block-type="text"]');
-            if (!wrapper) return;
-            wrapper.classList.remove('tg-drop-target');
+            if (!wrapper) {
+                currentDropTarget = null;
+                return;
+            }
 
             const editable = wrapper.querySelector('.notion-block-editable');
-            if (!editable || (editable.textContent || '').trim() !== '') return;
+            if (!editable || (editable.textContent || '').trim() !== '') {
+                currentDropTarget = null;
+                return;
+            }
 
             const blockId = wrapper.dataset.blockId;
-            if (!blockId) return;
+            if (!blockId) {
+                currentDropTarget = null;
+                return;
+            }
 
             const json = e.dataTransfer.getData('application/x-tg-message');
-            if (!json) return;
+            if (!json) {
+                currentDropTarget = null;
+                return;
+            }
 
             let payload;
-            try { payload = JSON.parse(json); } catch (err) { return; }
+            try { payload = JSON.parse(json); } catch (err) {
+                currentDropTarget = null;
+                return;
+            }
 
+            currentDropTarget = null;
             await this.replaceTextBlock(blockId, payload.chatId, payload.messageId);
+        });
+
+        // На случай отмены перетаскивания (Esc, бросили за пределы окна и т.д.)
+        document.addEventListener('dragend', () => {
+            if (currentDropTarget) {
+                currentDropTarget.classList.remove('tg-drop-target');
+                currentDropTarget = null;
+            }
         });
     }
 
@@ -123,7 +164,7 @@ export class TelegramDropManager {
             if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
 
             const newBlockData = await resp.json();
-            newBlockData.id = targetBlockId; // ← замена по id
+            newBlockData.id = targetBlockId;
 
             const saved = await this.collectionViewer.apiInteractor.replaceBlock(
                 this.collectionViewer.currentCollectionId,
@@ -147,4 +188,4 @@ export class TelegramDropManager {
             alert('Ошибка добавления сообщения');
         }
     }
-}
+}       

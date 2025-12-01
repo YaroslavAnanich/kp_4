@@ -37,12 +37,10 @@ export class TelegramViewer {
             
             if (messages.length < this.limit) this.hasMore = false;
             
-            // Определяем, будем ли мы добавлять сообщения в начало (prepend = true)
             const prepend = !!this.oldestMessageId;
             let oldScrollHeight = 0;
             
             if (prepend) {
-                // 1. Сохраняем старую высоту прокрутки перед добавлением
                 oldScrollHeight = this.messagesContainer.scrollHeight; 
             }
             
@@ -53,12 +51,9 @@ export class TelegramViewer {
             this.renderMessages(messages, prepend);
             
             if (prepend) {
-                // 3. Вычисляем новую высоту
                 const newScrollHeight = this.messagesContainer.scrollHeight;
-                // 4. Корректируем scrollTop, чтобы сохранить визуальное положение
                 this.messagesContainer.scrollTop = newScrollHeight - oldScrollHeight; 
             } else {
-                // Это первая загрузка - прокручиваем в самый низ
                 this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
             }
             
@@ -74,14 +69,19 @@ export class TelegramViewer {
             div.className = `message ${msg.is_outgoing ? 'outgoing' : 'incoming'}`;
             div.dataset.messageId = msg.id;
 
+            const hasText = msg.text && msg.text.trim().length > 0;
+            const hasPhoto = msg.media_type === 'photo' && (msg.photo_base64 || msg.file_path);
+
+            if (hasPhoto && !hasText) {
+                div.classList.add('photo-only');
+            }
+
             let html = '';
             
-            // Текстовое содержимое
             if (msg.text) {
                 html += `<div class="message-text">${this.escapeHtml(msg.text)}</div>`;
             }
 
-            // Медиа контент
             html += this.renderMediaContent(msg);
 
             div.innerHTML = html || '<em>media</em>';
@@ -98,13 +98,11 @@ export class TelegramViewer {
     renderMediaContent(msg) {
         let html = '';
         
-        // Фото (из base64)
         if (msg.media_type === 'photo' && msg.photo_base64) {
             html += `<div class="media-container photo-container">
                 <img src="data:image/jpeg;base64,${msg.photo_base64}" class="media-photo" alt="Photo">
             </div>`;
         }
-        // Аудио файл
         else if (msg.media_type === 'audio' && msg.file_path) {
             html += `<div class="media-container audio-container">
                 <audio controls class="media-audio">
@@ -113,7 +111,6 @@ export class TelegramViewer {
                 </audio>
             </div>`;
         }
-        // Документ/файл
         else if (msg.media_type === 'document' && msg.file_path) {
             const fileName = msg.file_name || 'Download file';
             html += `<div class="media-container document-container">
@@ -123,9 +120,7 @@ export class TelegramViewer {
                 </a>
             </div>`;
         }
-        // Ссылка
         else if (msg.media_type === 'link' && msg.text) {
-            // Извлекаем URL из текста
             const urlMatch = msg.text.match(/https?:\/\/[^\s]+/);
             if (urlMatch) {
                 const url = urlMatch[0];
@@ -137,32 +132,20 @@ export class TelegramViewer {
                 </div>`;
             }
         }
-        // Медиа без кэша (placeholder)
         else if (msg.media_type && !msg.file_path && !msg.photo_base64) {
             let icon = 'fa-file';
             let text = 'File';
-            
             switch(msg.media_type) {
-                case 'audio':
-                    icon = 'fa-music';
-                    text = 'Audio file';
-                    break;
-                case 'photo':
-                    icon = 'fa-image';
-                    text = 'Photo';
-                    break;
-                case 'document':
-                    icon = 'fa-file';
-                    text = 'Document';
-                    break;
+                case 'audio': icon = 'fa-music'; text = 'Audio file'; break;
+                case 'photo': icon = 'fa-image'; text = 'Photo'; break;
+                case 'document': icon = 'fa-file'; text = 'Document'; break;
             }
-            
             html += `<div class="media-container placeholder-container" data-msg-id="${msg.id}">
                 <div class="media-placeholder" data-media-type="${msg.media_type}">
                     <i class="fas ${icon}"></i>
                     <span>${text}${msg.file_name ? ': ' + this.escapeHtml(msg.file_name) : ''}</span>
                     <button class="download-btn" onclick="telegramViewer.cacheMedia(${msg.id})">
-                        <i class="fas fa-download"></i> Download
+                        Download
                     </button>
                 </div>
             </div>`;
@@ -171,19 +154,63 @@ export class TelegramViewer {
         return html;
     }
 
+    // ОПТИМИСТИЧНАЯ ОТПРАВКА СООБЩЕНИЯ
     async sendMessage() {
         const text = this.messageInput.value.trim();
         if (!text || !this.currentChatId) return;
 
+        const tempId = Date.now(); // временный ID
+
+        // 1. Сразу показываем сообщение локально
+        const optimisticMessage = {
+            id: tempId,
+            text: text,
+            is_outgoing: true,
+            media_type: null
+        };
+
+        this.renderMessages([optimisticMessage], false);
+        this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
+        this.messageInput.value = '';
+
         try {
-            await fetch(`${this.apiBaseUrl}/tg/${this.currentChatId}/send`, {
+            const response = await fetch(`${this.apiBaseUrl}/tg/${this.currentChatId}/send`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ text })
             });
-            this.messageInput.value = '';
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            // Всё ок — сервер примет и пришлёт через WS, мы просто ждём
+
         } catch (err) {
             console.error("Send error:", err);
+
+            // Помечаем сообщение как не отправленное
+            const msgEl = this.messagesContainer.querySelector(`.message[data-message-id="${tempId}"]`);
+            if (msgEl) {
+                msgEl.style.opacity = '0.6';
+                msgEl.style.border = '2px solid #e74c3c';
+                msgEl.title = 'Не удалось отправить';
+
+                if (!msgEl.querySelector('.retry-btn')) {
+                    const retryBtn = document.createElement('button');
+                    retryBtn.textContent = '↻';
+                    retryBtn.className = 'retry-btn';
+                    retryBtn.style.cssText = 'margin-left:8px;background:#e74c3c;color:white;border:none;padding:2px 6px;border-radius:4px;font-size:0.8em;cursor:pointer;';
+                    retryBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        const textToResend = msgEl.querySelector('.message-text')?.textContent || '';
+                        msgEl.remove();
+                        this.messageInput.value = textToResend;
+                        this.sendMessage();
+                    };
+                    msgEl.appendChild(retryBtn);
+                }
+            }
         }
     }
 
@@ -194,27 +221,43 @@ export class TelegramViewer {
         this.websocket = new WebSocket(wsUrl);
 
         this.websocket.onopen = () => console.log("WebSocket connected:", wsUrl);
+
         this.websocket.onmessage = (e) => {
             const data = JSON.parse(e.data);
             if (data.type === 'new_message') {
-                this.renderMessages([data.message], false);
+                const msg = data.message;
+
+                // Если сообщение уже есть (по ID) — не дублируем
+                if (this.messagesContainer.querySelector(`.message[data-message-id="${msg.id}"]`)) {
+                    return;
+                }
+
+                // Если это наше исходящее — удаляем временную версию (по совпадению текста)
+                if (msg.is_outgoing) {
+                    const outgoing = Array.from(this.messagesContainer.querySelectorAll('.message.outgoing'));
+                    for (const el of outgoing.reverse()) {
+                        const textEl = el.querySelector('.message-text');
+                        if (textEl && textEl.textContent === msg.text) {
+                            el.remove();
+                            break;
+                        }
+                    }
+                }
+
+                this.renderMessages([msg], false);
                 this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
             }
         };
+
         this.websocket.onerror = (err) => console.error("WebSocket error:", err);
         this.websocket.onclose = () => console.log("WebSocket disconnected");
     }
 
     async cacheMedia(messageId) {
         try {
-            const res = await fetch(`${this.apiBaseUrl}/tg/${this.currentChatId}/cache/${messageId}`, { 
-                method: 'POST' 
-            });
-            
+            const res = await fetch(`${this.apiBaseUrl}/tg/${this.currentChatId}/cache/${messageId}`, { method: 'POST' });
             if (res.ok) {
                 const filePath = await res.text();
-                
-                // Находим placeholder и заменяем его на реальный медиа-элемент
                 const placeholder = document.querySelector(`[data-msg-id="${messageId}"]`);
                 if (placeholder) {
                     const messageDiv = placeholder.closest('.message');
@@ -224,11 +267,13 @@ export class TelegramViewer {
                         file_path: filePath,
                         file_name: placeholder.querySelector('span').textContent.replace(/^[^:]+:\s?/, '')
                     };
-                    
                     const newMediaHtml = this.renderMediaContent(msgData);
                     placeholder.outerHTML = newMediaHtml;
+
+                    if (msgData.media_type === 'photo' && !messageDiv.querySelector('.message-text')) {
+                        messageDiv.classList.add('photo-only');
+                    }
                 }
-                
                 return filePath;
             }
             return null;
@@ -246,7 +291,7 @@ export class TelegramViewer {
 
     setupEventListeners() {
         this.sendButton.addEventListener('click', () => this.sendMessage());
-        this.messageInput.addEventListener('keydown', e => e.key === 'Enter' && this.sendMessage());
+        this.messageInput.addEventListener('keydown', e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), this.sendMessage()));
 
         this.messagesContainer.addEventListener('scroll', () => {
             if (this.messagesContainer.scrollTop === 0 && this.hasMore) {
@@ -254,7 +299,6 @@ export class TelegramViewer {
             }
         });
 
-        // Обработчик для кнопок загрузки
         this.messagesContainer.addEventListener('click', async (e) => {
             if (e.target.closest('.download-btn')) {
                 e.preventDefault();

@@ -234,25 +234,50 @@ export class BlockRenderer {
                 const img = document.createElement('img');
                 img.src = block.file_path;
                 img.alt = block.file_name || 'Image';
-                img.style.maxWidth = '100%';
-                img.style.borderRadius = '6px';
                 fileWrapper.appendChild(img);
                 break;
+
             case 'audio':
                 const audio = document.createElement('audio');
                 audio.controls = true;
                 audio.src = block.file_path;
-                audio.style.width = '100%';
                 fileWrapper.appendChild(audio);
                 break;
+
             case 'document':
-                const link = document.createElement('a');
-                link.href = block.file_path;
-                link.target = '_blank';
-                link.textContent = `[Документ] ${block.file_name || 'Открыть файл'}`;
-                link.style.color = '#d9b981';
-                fileWrapper.appendChild(link);
+                // Красивый блок с иконкой
+                const preview = document.createElement('a');
+                preview.href = block.file_path;
+                preview.target = '_blank';
+                preview.rel = 'noopener';
+                preview.className = 'document-preview';
+
+                // Иконка в зависимости от расширения
+                const ext = (block.file_name || '').toLowerCase().split('.').pop();
+                const icons = {
+                    pdf: 'fa-file-pdf',
+                    doc: 'fa-file-word',
+                    docx: 'fa-file-word',
+                    xls: 'fa-file-excel',
+                    xlsx: 'fa-file-excel',
+                    ppt: 'fa-file-powerpoint',
+                    pptx: 'fa-file-powerpoint',
+                    txt: 'fa-file-lines',
+                    zip: 'fa-file-zipper',
+                    rar: 'fa-file-zipper'
+                };
+                const iconClass = icons[ext] || 'fa-file';
+
+                preview.innerHTML = `
+                    <i class="fas ${iconClass} doc-icon"></i>
+                    <div class="doc-info">
+                        <div class="doc-name">${block.file_name || 'Документ'}</div>
+                        <div class="doc-size">${block.file_size ? this._formatBytes(block.file_size) : ''}</div>
+                    </div>
+                `;
+                fileWrapper.appendChild(preview);
                 break;
+
             default:
                 const text = document.createElement('p');
                 text.textContent = `[Файл] ${block.file_name || block.file_path}`;
@@ -260,5 +285,13 @@ export class BlockRenderer {
                 break;
         }
         return fileWrapper;
+    }
+
+    // Вспомогательная функция для красивого размера файла
+    _formatBytes(bytes) {
+        if (!bytes) return '';
+        const sizes = ['Б', 'КБ', 'МБ', 'ГБ'];
+        const i = Math.floor(Math.log(bytes) / Math.log(1024));
+        return parseFloat((bytes / Math.pow(1024, i)).toFixed(1)) + ' ' + sizes[i];
     }
 }

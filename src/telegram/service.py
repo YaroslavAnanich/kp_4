@@ -1,8 +1,11 @@
-# src/telegram/service.py
 import io
 import base64
 import os
 from typing import BinaryIO, List, Optional, Dict
+import cv2
+from PIL import Image
+import tempfile
+import os
 
 from telethon import TelegramClient, events
 from telethon.tl.types import (
@@ -326,6 +329,7 @@ class TelegramService:
         if not msg or not msg.media:
             return None
         data = await self.client.download_media(msg, file=bytes)
+        data = await self._convert_to_gif_bytes(data)
         return io.BytesIO(data) if data else None
 
     async def _download_media_to_base64(self, message: Message) -> Optional[str]:
@@ -376,13 +380,6 @@ class TelegramService:
         Конвертация MP4 в GIF с использованием OpenCV.
         """
         try:
-            import cv2
-            import numpy as np
-            from PIL import Image
-            import io
-            import tempfile
-            import os
-            
             # Создаем временный MP4 файл
             with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as temp_mp4:
                 temp_mp4.write(mp4_bytes)

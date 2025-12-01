@@ -7,15 +7,15 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>My Notes App</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="/ui/notion/styles/notion_explorer.css">
     <link rel="stylesheet" href="/ui/notion/styles/notion_viewer.css">
     <link rel="stylesheet" href="/ui/telegram/telegram.css">
     <link rel="stylesheet" href="/ui/llm/llm.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
     <script src="/ui/script.js" type="module" defer></script>
 </head>
 <body>
@@ -68,8 +68,12 @@
             <div class="integration-header">
                 <div class="chat-toggle-group">
                     <div class="chat-toggle-icons">
-                        <button class="chat-icon telegram-icon">Telegram</button>
-                        <button class="chat-icon vk-icon">VK</button>
+                        <button class="chat-icon telegram-icon" title="Telegram">
+                            <i class="fab fa-telegram"></i>
+                        </button>
+                        <button class="chat-icon vk-icon" title="VK">
+                            <i class="fab fa-vk"></i>
+                        </button>
                     </div>
                     <button class="chat-toggle-btn">
                         <i class="fas fa-plug"></i>
@@ -80,8 +84,7 @@
             <div class="integration-content">
                 <div class="integration-page">
                     <div class="chat-messages">
-                        <div class="message incoming">Hello there.</div>
-                        <div class="message outgoing">Got it.</div>
+                        <p>Click on the chat to display messages.</p>
                     </div>
                 </div>
                 
@@ -96,24 +99,28 @@
 
             <div class="integration-footer">
                 <input type="text" placeholder="Reply to chat...">
-                <button>Send</button>
+                <button class="send-btn">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
             </div>
         </div>
 
         <!-- LLM SECTION -->
         <div class="llm-section">
             <div class="llm-header">
-                <button class="action-button create-chat-btn">
-                    <i class="fas fa-plus"></i> Создать чат
-                </button>
-                <button class="action-button history-btn">
-                    <i class="fas fa-history"></i>
-                </button>
+                <div class="header-actions-group">
+                    <button class="action-button create-chat-btn">
+                        <i class="fas fa-plus"></i> Create a chat
+                    </button>
+                    <button class="action-button history-btn" title="История чатов">
+                        <i class="fas fa-history"></i>
+                    </button>
+                </div>
             </div>
 
             <div class="llm-page">
-                <div class="llm-message user-msg">Выберите коллекцию, чтобы начать общение с контекстом</div>
-                <div class="llm-message assistant-msg">Я могу помочь суммировать или отвечать на вопросы по вашим коллекциям. Сначала выберите коллекцию слева.</div>
+                <div class="llm-message user-msg">Select a collection to start a conversation with context</div>
+                <div class="llm-message assistant-msg">I can help answer questions about your collections. First, select a collection on the left</div>
             </div>
 
             <div class="llm-footer">
@@ -123,9 +130,9 @@
                     <button class="context-add-btn" title="Добавить контекст">
                         <i class="fas fa-plus"></i>
                     </button>
-                    <input type="text" class="llm-input" placeholder="Спросить LLM или добавить контекст...">
+                    <input type="text" class="llm-input" placeholder="Tell or ask something">
                     <button class="send-message-btn" title="Отправить">
-                        <i class="fas fa-paper-plane"></i>
+                        <i class="fas fa-arrow-right"></i>
                     </button>
                 </div>
             </div>
